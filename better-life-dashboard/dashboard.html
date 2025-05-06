@@ -2,16 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+    />
     <title>OECD Better Life Index Dashboard</title>
     <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
 <div class="dashboard-container">
     <h1 class="headline">OECD Better Life Index Dashboard</h1>
+
+    <!-- Country selector -->
+    <section class="control-panel">
+        <label for="country-select">Select country to compare with OECD</label>
+        <select id="country-select">
+            <option>Loading…</option>
+        </select>
+    </section>
+
+    <!-- Chart goes here -->
+    <div id="chart"></div>
 </div>
 
-<!-- Moved out of the container -->
+<!-- Back link -->
 <a href="index.html" class="prev-link nav-btn">← Go to Introduction</a>
+
+<!-- Dashboard script -->
+<script type="module" src="/src/dashboard.ts"></script>
 </body>
 </html>

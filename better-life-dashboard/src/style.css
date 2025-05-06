@@ -175,3 +175,51 @@ html, body {
 .prev-link:hover {
   color: var(--color-primary);
 }
+
+/* Dashboard-specific container spacing */
+.dashboard-container {
+  padding: 2rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* Country selector styling */
+.control-panel {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.control-panel label {
+  font-weight: 500;
+  color: var(--color-gray-dark);
+}
+.control-panel select {
+  font-family: 'Raleway', sans-serif;
+  font-size: 1rem;
+  padding: 0.5rem;
+  max-width: 300px;
+}
+
+/* Chart container centering */
+#chart {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Back-link at bottom-left */
+.prev-link {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+}
+
+/* ensure chart sits on white */
+#chart {
+  background: var(--color-white);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+}

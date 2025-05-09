@@ -1,225 +1,111 @@
-/* ----------------------------------
-   LOCAL VARIABLE FONT IMPORT
------------------------------------ */
-@font-face {
-  font-family: 'Raleway';
-  src: url('/fonts/Raleway-VariableFont_wght.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Raleway';
-  src: url('/fonts/Raleway-Italic-VariableFont_wght.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: italic;
-  font-display: swap;
-}
-
-/* slide-left animation */
-@keyframes slide-left {
-  0% {
-    transform: translate(calc(-50% + 100px), -45%);
-    opacity: 0;
-  }
-  100% {
-    transform: translate(-50%, -45%);
-    opacity: 1;
-  }
-}
-/* slide-right animation */
-@keyframes slide-right {
-  0% {
-    transform: translate(calc(-50% - 100px), -45%);
-    opacity: 0;
-  }
-  100% {
-    transform: translate(-50%, -45%);
-    opacity: 1;
-  }
-}
-
+/* Base and Font-Face omitted for brevity */
 :root {
   --color-gray-dark: #444444;
   --color-primary: #005B96;
   --color-white: #FFFFFF;
 }
-
-/* Reset & Base Styles */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+* { box-sizing: border-box; }
 html, body {
-  height: 100%;
+  margin: 0; padding: 0;
   font-family: 'Raleway', sans-serif;
   background: var(--color-white);
+  color: var(--color-gray-dark);
 }
 
-/* Carousel Container */
+/* Carousel */
 .carousel {
-  position: relative;
   width: 100%;
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* Slide Wrapper */
-.slide-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-/* Individual Slide */
-.slide {
-  position: absolute;
-  top: 45%; /* slightly above center */
-  left: 50%;
-  transform: translate(-50%, -45%);
-  width: 90%;
-  max-width: 800px;
+  min-height: 100vh;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+/* Slide Container */
+.slide-container {
+  width: 100%;
+  max-width: 800px;
+}
+
+/* Slide */
+.slide {
+  display: none;
   flex-direction: column;
-  align-items: flex-start;
   gap: 1.5rem;
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
 }
 .slide.active {
-  opacity: 1;
+  display: flex;
 }
 
 /* Headline & Description */
 .headline {
-  font-size: 64px;
+  font-size: 2.5rem;
   font-weight: 900;
-  color: var(--color-gray-dark);
 }
 .description {
-  font-size: 20px;
-  font-weight: 400;
-  color: var(--color-gray-dark);
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
-/* Images Layout */
+/* Images */
 .images {
   display: flex;
-  gap: 1rem;
   flex-wrap: wrap;
+  gap: 1rem;
 }
 .images img {
   width: calc(50% - 0.5rem);
-  max-width: 350px;
   border-radius: 0.5rem;
   object-fit: cover;
 }
 @media (max-width: 600px) {
-  .images img {
-    width: 100%;
-  }
+  .images img { width: 100%; }
+  .headline { font-size: 1.75rem; }
+  .description { font-size: 0.9rem; }
 }
 
-/* Navigation Controls (inside each slide) */
-.nav-controls {
+/* Map Container */
+#map-container {
   width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 2rem 0;
+}
+
+/* Navigation Controls */
+.nav-controls {
   display: flex;
   justify-content: space-between;
   margin-top: 1rem;
 }
-/* Hide Prev on first slide */
-.slide:first-child .nav-controls .prev {
-  display: none;
-  pointer-events: none;
-}
-/* When only Next is present, push it to the right */
-.slide:first-child .nav-controls {
-  justify-content: flex-end;
-}
-
 .nav-btn {
   background: none;
-  border: none;
-  font-size: 1rem;
-  color: var(--color-gray-dark);
-  cursor: pointer;
+  border: 1px solid var(--color-gray-dark);
+  border-radius: 4px;
   padding: 0.5rem 1rem;
-  transition: color 0.2s;
-  position: static; /* override any absolute */
-  text-decoration: none; /* for links */
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
 }
 .nav-btn:hover {
-  color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-white);
 }
 
-/* Dashboard-specific container */
-.dashboard-container {
-  padding: 2rem;
+/* Hide Prev on first slide */
+.slide:first-child .prev {
+  visibility: hidden;
 }
 
-/* Dashboard back-link in bottom-left */
-.prev-link {
-  position: fixed;
-  bottom: 1rem;
-  left: 1rem;
-  background: none;
-  border: none;
-  font-size: 1rem;
-  color: var(--color-gray-dark);
-  text-decoration: none;
-  cursor: pointer;
-  transition: color 0.2s;
-  padding: 0.5rem 1rem;
-}
-.prev-link:hover {
-  color: var(--color-primary);
-}
-
-/* Dashboard-specific container spacing */
-.dashboard-container {
-  padding: 2rem;
-  max-width: 960px;
-  margin: 0 auto;
-}
-
-/* Country selector styling */
-.control-panel {
-  margin-bottom: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.control-panel label {
-  font-weight: 500;
-  color: var(--color-gray-dark);
-}
-.control-panel select {
-  font-family: 'Raleway', sans-serif;
-  font-size: 1rem;
+/* Tooltip */
+#map-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #fff;
+  border: 1px solid #ccc;
   padding: 0.5rem;
-  max-width: 300px;
-}
-
-/* Chart container centering */
-#chart {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* Back-link at bottom-left */
-.prev-link {
-  position: fixed;
-  bottom: 1rem;
-  left: 1rem;
-}
-
-/* ensure chart sits on white */
-#chart {
-  background: var(--color-white);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem 0;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  z-index: 1000;
 }

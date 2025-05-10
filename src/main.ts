@@ -74,6 +74,24 @@ const elems = slides.map((s, i) => {
   if (s.images[1]) imgs[1].src = s.images[1];
   else imgs[1].style.display = "none";
 
+  // ─── Extra branding ONLY on the first slide ───
+  if (i === 0) {
+    // logo
+    const logo = document.createElement("img");
+    logo.src = "/logo-bli.png";
+    logo.alt = "Better Life Index logo";
+    logo.className = "logo";
+
+    // subtitle
+    const subtitle = document.createElement("h2");
+    subtitle.textContent = "2024 Visualized";
+    subtitle.className = "subtitle";
+
+    // insert both above the main headline
+    el.prepend(subtitle);
+    el.prepend(logo);
+  }
+
   // map placeholder
   if (s.headline.includes("Where are you from")) {
     const mapDiv = document.createElement("div");
@@ -90,7 +108,7 @@ elems.forEach((el, i) => {
   const prev = el.querySelector<HTMLButtonElement>(".prev")!;
   const next = el.querySelector<HTMLButtonElement>(".next")!;
   if (i === 0) prev.style.visibility = "hidden";
-  if (i === slides.length - 1) next.textContent = "Go to dashboard →";
+  if (i === slides.length - 1) next.textContent = "Go to Dashboard →";
   prev.onclick = () => navigate(-1);
   next.onclick = () => navigate(1);
 });

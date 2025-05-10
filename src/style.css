@@ -1,18 +1,42 @@
-/* Base and Font-Face omitted for brevity */
+/*───────────────────────────────────────────────────────────────
+  OECD Better Life Index 2024 ‑ Global Styles
+────────────────────────────────────────────────────────────────*/
+
+/* 1 ▸ LOCAL VARIABLE FONTS (TTF)
+   ───────────────────────────────*/
+@font-face {
+  font-family: "Raleway";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/Raleway-VariableFont_wght.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Raleway";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/Raleway-Italic-VariableFont_wght.ttf") format("truetype");
+}
+
+/* 2 ▸ ROOT & RESET
+   ───────────────────────────────*/
 :root {
-  --color-gray-dark: #444444;
-  --color-primary: #005B96;
-  --color-white: #FFFFFF;
+  --color-gray-dark: #444;
+  --color-primary:    #005B96;
+  --color-white:      #fff;
 }
 * { box-sizing: border-box; }
 html, body {
-  margin: 0; padding: 0;
-  font-family: 'Raleway', sans-serif;
+  margin: 0;
+  padding: 0;
+  font-family: "Raleway", sans-serif;
   background: var(--color-white);
   color: var(--color-gray-dark);
 }
 
-/* Carousel */
+/* 3 ▸ CAROUSEL LAYOUT
+   ───────────────────────────────*/
 .carousel {
   width: 100%;
   min-height: 100vh;
@@ -21,34 +45,57 @@ html, body {
   justify-content: center;
   padding: 2rem;
 }
-
-/* Slide Container */
 .slide-container {
   width: 100%;
   max-width: 800px;
 }
 
-/* Slide */
+/* 4 ▸ SLIDES
+   ───────────────────────────────*/
 .slide {
   display: none;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.75rem;                                   /* base rhythm everywhere */
 }
-.slide.active {
-  display: flex;
-}
+.slide.active { display: flex; }
 
-/* Headline & Description */
+/* Headline & body copy */
 .headline {
   font-size: 2.5rem;
   font-weight: 900;
+  margin: 0 0 0.335em 0;                          /* paragraph gap halved */
 }
 .description {
   font-size: 1rem;
   line-height: 1.5;
 }
 
-/* Images */
+/* Doubling ONLY subtitle → headline spacing on first slide */
+.slide:first-child .headline { margin-top: 0.75rem; }  /* + 0.75 rem → 1.5 rem total */
+
+/* Responsive type */
+@media (max-width: 600px) {
+  .headline    { font-size: 1.75rem; }
+  .description { font-size: 0.9rem;  }
+}
+
+/* 5 ▸ FIRST‑SLIDE BRANDING
+   ───────────────────────────────*/
+.slide .logo {
+  width: clamp(180px, 25vw, 240px);
+  align-self: flex-start;
+}
+.slide .subtitle {
+  font-size: clamp(2.8rem, 6.5vw, 4.2rem);
+  font-weight: 900;
+  line-height: 1.05;
+  margin: 0.6rem 0 0;                             /* space below logo */
+  text-align: left;
+  color: var(--color-gray-dark);
+}
+
+/* 6 ▸ IMAGES
+   ───────────────────────────────*/
 .images {
   display: flex;
   flex-wrap: wrap;
@@ -59,20 +106,18 @@ html, body {
   border-radius: 0.5rem;
   object-fit: cover;
 }
-@media (max-width: 600px) {
-  .images img { width: 100%; }
-  .headline { font-size: 1.75rem; }
-  .description { font-size: 0.9rem; }
-}
+@media (max-width: 600px) { .images img { width: 100%; } }
 
-/* Map Container */
+/* 7 ▸ MAP CONTAINER
+   ───────────────────────────────*/
 #map-container {
   width: 100%;
   aspect-ratio: 16 / 9;
   margin: 2rem 0;
 }
 
-/* Navigation Controls */
+/* 8 ▸ NAVIGATION CONTROLS
+   ───────────────────────────────*/
 .nav-controls {
   display: flex;
   justify-content: space-between;
@@ -85,19 +130,16 @@ html, body {
   padding: 0.5rem 1rem;
   font-size: 1rem;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background .2s, color .2s;
 }
 .nav-btn:hover {
   background: var(--color-primary);
   color: var(--color-white);
 }
+.slide:first-child .prev { visibility: hidden; }  /* hide “Prev” on slide 0 */
 
-/* Hide Prev on first slide */
-.slide:first-child .prev {
-  visibility: hidden;
-}
-
-/* Tooltip */
+/* 9 ▸ MAP TOOLTIP
+   ───────────────────────────────*/
 #map-tooltip {
   position: absolute;
   pointer-events: none;
@@ -106,6 +148,6 @@ html, body {
   padding: 0.5rem;
   font-size: 0.85rem;
   border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
   z-index: 1000;
 }

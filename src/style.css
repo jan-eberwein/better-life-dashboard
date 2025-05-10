@@ -151,3 +151,6 @@ html, body {
   box-shadow: 0 2px 6px rgba(0,0,0,.15);
   z-index: 1000;
 }
+
+/* Tooltip for story scatter */
+.scatter-tooltip-story { font-family: Raleway, sans-serif; }

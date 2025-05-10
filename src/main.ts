@@ -1,4 +1,5 @@
 import { drawMap } from "./map";
+import {drawScatter} from "./scatter.ts";
 
 interface Slide {
   headline: string;
@@ -23,10 +24,7 @@ const slides: Slide[] = [
   {
     headline: "Money or time? What really makes us happy?",
     description: `It’s tempting to assume: more money means more happiness. But let’s test that idea.<br><br>Below is a scatterplot showing average income on the x-axis and the share of people working very long hours on the y-axis — two key factors that shape our day-to-day experience. We might expect that richer countries offer more leisure, while poorer ones require more work. But do the data agree?<br><br>The result is surprising: there’s no strong trend. The U.S., for instance, has high income but also a large share of people working very long hours. On the other hand, the Netherlands — with moderate income — shows one of the lowest rates of overwork.<br><br>In short: money alone doesn’t buy balance. Time — and how it’s spent — may be even more important than wealth. This moment of contradiction keeps the audience curious and engaged: what else matters?`,
-    images: [
-      "https://via.placeholder.com/600x400?text=3A",
-      "https://via.placeholder.com/600x400?text=3B"
-    ],
+    images: [],
   },
   {
     headline: "What does the “perfect” country look like?",
@@ -69,41 +67,53 @@ const elems = slides.map((s, i) => {
   el.querySelector(".headline")!.innerHTML = s.headline;
   el.querySelector(".description")!.innerHTML = s.description;
 
-  const imgs = el.querySelectorAll<HTMLImageElement>(".images img");
-  imgs[0].src = s.images[0];
-  if (s.images[1]) imgs[1].src = s.images[1];
-  else imgs[1].style.display = "none";
+  const imgWrap = el.querySelector<HTMLDivElement>(".images")!;
 
-  // ─── Extra branding ONLY on the first slide ───
+  if (s.images.length) {
+    const imgs = imgWrap.querySelectorAll<HTMLImageElement>("img");
+    imgs[0].src = s.images[0];
+    if (s.images[1]) imgs[1].src = s.images[1];
+    else imgs[1].style.display = "none";
+  } else {
+    imgWrap.remove(); // remove placeholder <div class="images"> entirely
+  }
+
+  // ─── First‑slide logo + subtitle (kept from earlier)
   if (i === 0) {
-    // logo
     const logo = document.createElement("img");
     logo.src = "/logo-bli.png";
     logo.alt = "Better Life Index logo";
     logo.className = "logo";
 
-    // subtitle
     const subtitle = document.createElement("h2");
     subtitle.textContent = "2024 Visualized";
     subtitle.className = "subtitle";
 
-    // insert both above the main headline
     el.prepend(subtitle);
     el.prepend(logo);
   }
 
-  // map placeholder
+  // ─── Map placeholder
   if (s.headline.includes("Where are you from")) {
     const mapDiv = document.createElement("div");
     mapDiv.id = "map-container";
     el.querySelector(".description")!.insertAdjacentElement("afterend", mapDiv);
   }
 
+  // ─── Scatter‑plot placeholder (NEW)
+  if (s.headline.startsWith("Money or time")) {
+    const scatterDiv = document.createElement("div");
+    scatterDiv.id = "scatter-slide";
+    scatterDiv.style.width = "100%";
+    scatterDiv.style.marginTop = "20px";
+    el.querySelector(".description")!.insertAdjacentElement("afterend", scatterDiv);
+  }
+
   container.append(el);
   return el;
 });
 
-// set up navigation
+// ─── Navigation
 elems.forEach((el, i) => {
   const prev = el.querySelector<HTMLButtonElement>(".prev")!;
   const next = el.querySelector<HTMLButtonElement>(".next")!;
@@ -115,18 +125,31 @@ elems.forEach((el, i) => {
 
 function navigate(dir: number) {
   elems[current].classList.remove("active");
-  if (current === slides.length - 1 && dir === 1) {
-    return (window.location.href = "dashboard.html");
-  }
-  current = (current + dir + elems.length) % elems.length;
-  elems[current].classList.add("active");
 
-  // only draw map on that slide, once
+  // jump to dashboard
+  if (current === slides.length - 1 && dir === 1) {
+    window.location.href = "dashboard.html";
+    return;
+  }
+
+  current = (current + dir + elems.length) % elems.length;
+  const slide = elems[current];
+  slide.classList.add("active");
+
+  // draw map once
   if (
-    slides[current].headline.includes("Where are you from") &&
-    document.getElementById("map-container")!.childElementCount === 0
+      slides[current].headline.includes("Where are you from") &&
+      !document.querySelector("#map-container svg")
   ) {
     drawMap("map-container");
+  }
+
+  // draw scatter once
+  if (
+      slides[current].headline.startsWith("Money or time") &&
+      !document.querySelector("#scatter-slide svg")
+  ) {
+    drawScatter("scatter-slide");
   }
 }
 

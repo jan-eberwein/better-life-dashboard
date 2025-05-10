@@ -13,22 +13,43 @@
 <div class="dashboard-container">
     <h1 class="headline">OECD Better Life Index Dashboard</h1>
 
-    <!-- Country selector -->
     <section class="control-panel">
-        <label for="country-select">Select country to compare with OECD</label>
-        <select id="country-select">
-            <option>Loading…</option>
-        </select>
-    </section>
+        <div>
+            <label for="country-select">Select Country (for Radar & Scatter Plot Highlight):</label>
+            <select id="country-select">
+                <option>Loading…</option>
+            </select>
+        </div>
+        </section>
 
-    <!-- Chart goes here -->
-    <div id="chart"></div>
+    <section id="radar-chart-section" style="margin-top: 20px;">
+        <h2 style="font-size: 1.5em;">Country Profile vs. OECD Average (Radar)</h2>
+        <div id="chart"></div> </section>
+
+    <section id="scatter-plot-section" style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
+        <h2 style="font-size: 1.5em;">Explore Indicator Relationships (Scatter)</h2>
+
+        <div class="scatter-plot-controls" style="margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border-radius: 4px;">
+            <div>
+                <label for="x-axis-select" style="display: inline-block; min-width: 60px; margin-bottom: 5px;">X-Axis:</label>
+                <select id="x-axis-select"></select>
+            </div>
+            <div style="margin-top: 5px;">
+                <label for="y-axis-select" style="display: inline-block; min-width: 60px; margin-bottom: 5px;">Y-Axis:</label>
+                <select id="y-axis-select"></select>
+            </div>
+            <div style="margin-top: 10px;">
+                <input type="checkbox" id="scale-population-checkbox" style="margin-left: 0; vertical-align: middle;">
+                <label for="scale-population-checkbox" style="vertical-align: middle;">Scale dots by population</label>
+            </div>
+        </div>
+
+        <div id="scatter-plot-container"></div> </section>
+
 </div>
 
-<!-- Back link -->
 <a href="index.html" class="prev-link nav-btn">← Go to Introduction</a>
 
-<!-- Dashboard script -->
 <script type="module" src="/src/dashboard.ts"></script>
 </body>
 </html>

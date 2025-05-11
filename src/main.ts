@@ -8,19 +8,20 @@ interface Slide {
   images: string[];
 }
 
+// Key for persisting the current slide index
+const STORAGE_KEY = 'bli-current-slide';
+
+// Slides for the introduction carousel
 const slides: Slide[] = [
   {
     headline: "How’s life?",
     description: `What makes for a good life? Many people might say “money” or “career success,” but quality of life goes far beyond income. The OECD Better Life Index 2024 compares countries not just economically, but across 11 key dimensions that truly shape our daily lives — like health, education, environment, work-life balance, and social connection.<br><br>This project invites you to explore these factors interactively. Through data and storytelling, we’ll uncover where people are most satisfied with life in 2024 — and why.`,
-    images: [
-      "https://via.placeholder.com/600x400?text=1A",
-      "https://via.placeholder.com/600x400?text=1B",
-    ],
+    images: [],
   },
   {
     headline: "The 38 member countries",
     description: `The Better Life Index focuses on 38 OECD member countries. These nations vary widely in culture, policy, and — as we’ll see — in overall life satisfaction.<br><br>Take a look at the map below, and you’ll already notice something interesting: countries like Finland, Denmark, and the Netherlands are glowing with high satisfaction scores.<br><br>In contrast, countries like Turkey or Greece show much lower levels of reported life satisfaction. What explains this difference? What are the real drivers of happiness?`,
-    images: ["https://via.placeholder.com/600x400?text=2A"],
+    images: [],
   },
   {
     headline: "Money or time? What really makes us happy?",
@@ -30,7 +31,7 @@ const slides: Slide[] = [
   {
     headline: "What does the “perfect” country look like?",
     description: `Each country has its own strengths — and weaknesses. The Better Life Index evaluates 11 different life aspects: from jobs and health to environment, education, safety, and community.<br><br>No country is best at everything. That’s why we compare “profiles”—unique patterns across all dimensions of well-being. Compare, for example, the Netherlands and the United States. The Netherlands excels in work-life balance and social support, while the U.S. leads in education and income—but falls behind in safety and civic engagement.<br><br>The key insight: top-performing countries aren’t perfect—but balanced. They combine moderate to high values across many dimensions to create a more sustainable satisfaction.`,
-    images: ["https://via.placeholder.com/600x400?text=4A"],
+    images: [],
   },
   {
     headline: "Where are you from?",
@@ -40,23 +41,28 @@ const slides: Slide[] = [
   {
     headline: "Explore more: create your own comparisons",
     description: `Now it’s your turn. Select countries, filter categories, and test your own ideas. Look into income, safety, work pressure, education—whatever interests you. This dashboard empowers you to explore, ask questions, and go deeper than any single story could.`,
-    images: [
-      "https://via.placeholder.com/600x400?text=6A",
-      "https://via.placeholder.com/600x400?text=6B"
-    ],
+    images: [],
   },
   {
     headline: "Conclusion: <br> What is a “better life”?",
     description: `Our journey through the data shows:<br><br>There is no single “best” country. But there are patterns. The most satisfied societies aren’t always the richest—they’re the most balanced. They value time, trust, health, and freedom.<br><br>Quality of life is multi-dimensional. It’s about balance—not just growth. Data can help us understand, compare, and improve it. So what would you choose in a better life? More time? Better health? A safer community? This dashboard is your tool to explore.`,
-    images: [
-      "https://via.placeholder.com/600x400?text=6A",
-      "https://via.placeholder.com/600x400?text=6B"
-    ],
+    images: [],
   },
 ];
+
 let current = 0;
+
+// Restore saved slide index (if any) on load
+const saved = localStorage.getItem(STORAGE_KEY);
+if (saved !== null) {
+  const idx = parseInt(saved, 10);
+  if (!isNaN(idx) && idx >= 0 && idx < slides.length) {
+    current = idx;
+  }
+}
+
 const container = document.querySelector<HTMLDivElement>(".slide-container")!;
-const template  = container.querySelector<HTMLDivElement>(".slide")!;
+const template = container.querySelector<HTMLDivElement>(".slide")!;
 template.remove();
 
 const elems = slides.map((s, i) => {
@@ -94,9 +100,8 @@ const elems = slides.map((s, i) => {
   if (s.headline === "Where are you from?") {
     const mapDiv = document.createElement("div");
     mapDiv.id = "map-container";
-    // styling in CSS
     el.querySelector(".description")!
-      .insertAdjacentElement("afterend", mapDiv);
+        .insertAdjacentElement("afterend", mapDiv);
   }
 
   // ─── Scatter placeholder on the “Money or time?” slide
@@ -106,7 +111,7 @@ const elems = slides.map((s, i) => {
     scatterDiv.style.width     = "100%";
     scatterDiv.style.marginTop = "20px";
     el.querySelector(".description")!
-      .insertAdjacentElement("afterend", scatterDiv);
+        .insertAdjacentElement("afterend", scatterDiv);
   }
 
   container.append(el);
@@ -128,31 +133,34 @@ function navigate(dir: number) {
 
   // last slide → dashboard.html
   if (current === slides.length - 1 && dir === 1) {
+    localStorage.setItem(STORAGE_KEY, current.toString());
     window.location.href = "dashboard.html";
     return;
   }
 
   current = (current + dir + elems.length) % elems.length;
   elems[current].classList.add("active");
+  localStorage.setItem(STORAGE_KEY, current.toString());
 
   // draw map when landing on “Where are you from?”
   if (
-    slides[current].headline === "Where are you from?" &&
-    !document.querySelector("#map-container svg")
+      slides[current].headline === "Where are you from?" &&
+      !document.querySelector("#map-container svg")
   ) {
     drawMap("map-container");
   }
 
   // draw scatter when landing on “Money or time?”
   if (
-    slides[current].headline.startsWith("Money or time") &&
-    !document.querySelector("#scatter-slide svg")
+      slides[current].headline.startsWith("Money or time") &&
+      !document.querySelector("#scatter-slide svg")
   ) {
     drawScatter("scatter-slide");
   }
 }
 
-elems[0].classList.add("active");
+// Activate the saved (or first) slide
+elems[current].classList.add("active");
 
 // ← / → arrow keys
 document.addEventListener("keydown", (e) => {

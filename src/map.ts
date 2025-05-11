@@ -123,8 +123,12 @@ export async function drawMap(
       .on('mouseout', () => tooltip.classed('hidden', true))
       .on('click', (_, d) => {
         const rec = data.find(p => p.country === d.properties!.name);
-        if (rec) updateWidget(rec);
+        if (rec) {
+          localStorage.setItem('bli-selected-country', rec.country);
+          updateWidget(rec);
+        }
       });
+
 
   // Zoom behavior
   const zoom = d3.zoom<SVGSVGElement,unknown>()

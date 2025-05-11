@@ -260,6 +260,23 @@ export async function drawMap(
         .attr('stroke', colorRadar(series.country))
         .attr('stroke-width', 1.5);
     });
+    //legend
+    const legend = rc.append('div').attr('class','tooltip-legend');
+    const legendItems = [
+      { color: '#e41a1c', label: rec.country },
+      { color: '#4daf4a', label: 'OECD avg' }
+    ];
+    const legendList = legend.append('ul');
+    legendItems.forEach(item => {
+        const li = legendList.append('li');
+        li.append('span')
+            .attr('class', 'legend-color')
+            .style('background-color', item.color);
+        li.append('span')
+            .attr('class', 'legend-label')
+            .text(item.label);
+        }
+    );
   }
 
   function moveTooltip(event: MouseEvent) {

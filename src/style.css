@@ -360,3 +360,68 @@ body {
   display: block;
   margin: 0 auto;
 }
+
+
+/* Ensure the tooltip can grow and wrap text */
+#tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #999;
+  padding: 30px;
+  border-radius: 4px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.95em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  max-width: 240px;        /* allow wider tooltips */
+  white-space: normal;     /* wrap long lines */
+  z-index: 1000;
+}
+
+/* Give a bit more breathing room inside */
+.tooltip-header {
+  margin-bottom: 8px;
+}
+.tooltip-metric {
+  margin-bottom: 8px;
+}
+
+/* Make the radar-chart container flex-center so it’s always visible */
+.tooltip-chart {
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+/* Legend below chart */
+.tooltip-legend {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+  color: #333;
+}
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* hide bullet points */
+.tooltip-chart ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Prevent any overflow hiding */
+.tooltip-chart svg {
+  overflow: visible;
+}

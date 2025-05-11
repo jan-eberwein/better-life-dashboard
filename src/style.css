@@ -5,176 +5,263 @@
 /* 1 ▸ LOCAL VARIABLE FONTS (TTF)
    ───────────────────────────────*/
 @font-face {
-  font-family: "Raleway";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("../fonts/Raleway-VariableFont_wght.ttf") format("truetype");
+    font-family: "Raleway";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("../fonts/Raleway-VariableFont_wght.ttf") format("truetype");
 }
 @font-face {
-  font-family: "Raleway";
-  font-style: italic;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("../fonts/Raleway-Italic-VariableFont_wght.ttf") format("truetype");
+    font-family: "Raleway";
+    font-style: italic;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("../fonts/Raleway-Italic-VariableFont_wght.ttf") format("truetype");
 }
 
 /* 2 ▸ ROOT & RESET
    ───────────────────────────────*/
 :root {
-  --color-gray-dark: #444;
-  --color-primary:    #005B96;
-  --color-white:      #fff;
+    --color-gray-dark: #444;
+    --color-primary:    #005B96;
+    --color-white:      #fff;
 }
 * { box-sizing: border-box; }
 html, body {
-  margin: 0;
-  padding: 0;
-  font-family: "Raleway", sans-serif;
-  background: var(--color-white);
-  color: var(--color-gray-dark);
+    margin: 0;
+    padding: 0;
+    font-family: "Raleway", sans-serif;
+    background: var(--color-white);
+    color: var(--color-gray-dark);
 }
 
-/* 3 ▸ CAROUSEL LAYOUT
+/* 3 ▸ CAROUSEL LAYOUT (If applicable, for a storytelling page perhaps)
    ───────────────────────────────*/
 .carousel {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
 }
 .slide-container {
-  width: 100%;
-  max-width: 800px;
+    width: 100%;
+    max-width: 800px; /* Or dashboard max-width if used for dashboard sections */
 }
 
-/* 4 ▸ SLIDES
+/* 4 ▸ SLIDES (If applicable)
    ───────────────────────────────*/
 .slide {
-  display: none;
-  flex-direction: column;
-  gap: 0.75rem;                                   /* base rhythm everywhere */
+    display: none;
+    flex-direction: column;
+    gap: 0.75rem;                                   /* base rhythm everywhere */
 }
 .slide.active { display: flex; }
 
 /* Headline & body copy */
 .headline {
-  font-size: 2.5rem;
-  font-weight: 900;
-  margin: 0 0 0.335em 0;                          /* paragraph gap halved */
+    font-size: 2.5rem;
+    font-weight: 900;
+    margin: 0 0 0.335em 0;                          /* paragraph gap halved */
 }
 .description {
-  font-size: 1rem;
-  line-height: 1.5;
+    font-size: 1rem;
+    line-height: 1.5;
 }
 
-/* Doubling ONLY subtitle → headline spacing on first slide */
+/* Doubling ONLY subtitle → headline spacing on first slide (If applicable) */
 .slide:first-child .headline { margin-top: 0.75rem; }  /* + 0.75 rem → 1.5 rem total */
 
 /* Responsive type */
 @media (max-width: 600px) {
-  .headline    { font-size: 1.75rem; }
-  .description { font-size: 0.9rem;  }
+    .headline    { font-size: 1.75rem; }
+    .description { font-size: 0.9rem;  }
 }
 
-/* 5 ▸ FIRST‑SLIDE BRANDING
+/* 5 ▸ FIRST‑SLIDE BRANDING (If applicable)
    ───────────────────────────────*/
 .slide .logo {
-  width: clamp(180px, 25vw, 240px);
-  align-self: flex-start;
+    width: clamp(180px, 25vw, 240px);
+    align-self: flex-start;
 }
 .slide .subtitle {
-  font-size: clamp(2.8rem, 6.5vw, 4.2rem);
-  font-weight: 900;
-  line-height: 1.05;
-  margin: 0.6rem 0 0;                             /* space below logo */
-  text-align: left;
-  color: var(--color-gray-dark);
+    font-size: clamp(2.8rem, 6.5vw, 4.2rem);
+    font-weight: 900;
+    line-height: 1.05;
+    margin: 0.6rem 0 0;                             /* space below logo */
+    text-align: left;
+    color: var(--color-gray-dark);
 }
 
-/* 6 ▸ IMAGES
+/* 6 ▸ IMAGES (If applicable)
    ───────────────────────────────*/
 .images {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 .images img {
-  width: calc(50% - 0.5rem);
-  border-radius: 0.5rem;
-  object-fit: cover;
+    width: calc(50% - 0.5rem);
+    border-radius: 0.5rem;
+    object-fit: cover;
 }
 @media (max-width: 600px) { .images img { width: 100%; } }
 
-/* 7 ▸ MAP CONTAINER
+/* 7 ▸ MAP CONTAINER (If applicable)
    ───────────────────────────────*/
 #map-container {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  margin: 2rem 0;
+    width: 100%;
+    aspect-ratio: 16 / 9; /* More responsive */
+    margin: 1rem 0;      /* Kept from file 1, adjust as needed */
 }
 
 /* 8 ▸ NAVIGATION CONTROLS
    ───────────────────────────────*/
 .nav-controls {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1rem;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
 }
 .nav-btn {
-  background: none;
-  border: 1px solid var(--color-gray-dark);
-  border-radius: 4px;
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background .2s, color .2s;
+    background: none;
+    border: 1px solid var(--color-gray-dark);
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background .2s, color .2s;
 }
 .nav-btn:hover {
-  background: var(--color-primary);
-  color: var(--color-white);
+    background: var(--color-primary);
+    color: var(--color-white);
 }
-.slide:first-child .prev { visibility: hidden; }  /* hide “Prev” on slide 0 */
+.slide:first-child .prev { visibility: hidden; }  /* hide “Prev” on slide 0 (If applicable) */
 
-/* 9 ▸ MAP TOOLTIP
+/* 9 ▸ TOOLTIPS
    ───────────────────────────────*/
+/* Map Tooltip */
 #map-tooltip {
-  position: absolute;
-  pointer-events: none;
-  background: #fff;
-  border: 1px solid #ccc;
-  padding: 0.5rem;
-  font-size: 0.85rem;
-  border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(0,0,0,.15);
-  z-index: 1000;
+    position: absolute;
+    pointer-events: none;
+    background: #fff; /* From file 2, more explicit */
+    border: 1px solid #ccc;
+    padding: 0.5rem; /* From file 2 */
+    font-size: 0.85rem; /* From file 2 */
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.15); /* From file 2 */
+    z-index: 1000;
+    white-space: nowrap; /* Ensure it doesn't wrap, common for tooltips */
 }
 
-/* Tooltip for story scatter */
-.scatter-tooltip-story { font-family: Raleway, sans-serif; }
+/* General Scatter Tooltip from V1 style (used by some scatter plots if not .scatter-tooltip-external) */
+.scatter-tip {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 11px;
+    position: absolute;
+    pointer-events: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+    z-index: 1000; /* Ensure it's above other elements */
+}
 
-/* ── Control Panel ────────────────────────────────────────── */
+/* Tooltip for story scatter (If applicable, could be a specific variant) */
+.scatter-tooltip-story {
+    font-family: Raleway, sans-serif; /* Explicit font for this one if needed */
+    /* Other styles could be inherited from .scatter-tip or defined here */
+}
+
+/* The .scatter-tooltip-external is styled inline in the JS for the main dashboard scatter plot */
+
+
+/* ── DASHBOARD SPECIFIC STYLES ────────────────────────────────── */
+.dashboard-container {
+    max-width: 1000px; /* Example, adjust as needed */
+    margin: 2rem auto;
+    padding: 1rem;
+}
+
+/* Control Panel for Dashboard */
 .control-panel {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem; /* Space between control groups */
+    margin-bottom: 1.5rem; /* Space below the whole panel */
+    padding: 10px;
+    background-color: #f0f0f0; /* Light background for the panel */
+    border-radius: 4px;
+    border: 1px solid #ddd;
 }
-.control-group label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.9rem;
-}
-.control-group select,
-.control-group input[type="checkbox"] {
-  font-size: 1rem;
+.control-panel > div { /* Direct children of control-panel (individual control groups) */
+    display: flex;
+    flex-direction: column; /* Stack label and select/input */
+    gap: 0.25rem;
 }
 
-/* ── Bar Chart Section ────────────────────────────────────── */
+/* Styles for specific control groups if needed (or use classes on the divs in HTML) */
+.scatter-plot-controls,
+.bar-chart-controls { /* Re-using existing HTML classes for consistency */
+    /* These are already styled inline in the HTML, but you could centralize here */
+    /* Example: */
+    /* margin-bottom: 20px; */
+    /* padding: 10px; */
+    /* background-color: #f0f0f0; */
+    /* border-radius: 4px; */
+    /* border: 1px solid #ddd; */
+}
+
+.control-panel label {
+    display: block; /* Make label take full width of its container */
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+.control-panel select,
+.control-panel input[type="checkbox"] {
+    font-size: 0.9rem; /* Slightly smaller font for controls */
+    padding: 0.25rem 0.4rem;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+.control-panel input[type="checkbox"] {
+    padding: 0; /* Remove default padding for checkboxes */
+    margin-right: 0.3em;
+    vertical-align: middle;
+}
+.control-panel label[for*="checkbox"] { /* Labels associated with checkboxes */
+    font-weight: normal;
+    vertical-align: middle;
+}
+
+
+/* ── Bar Chart Section Specifics ──────────────────────────────── */
 #bar-chart {
-  width: 100%;
-  height: 500px; /* adjust as desired */
-  margin-top: 0.5rem;
+    width: 100%;
+    min-height: 400px; /* Ensure it has some height, can be overridden by JS if needed */
+    /* height: 500px; was in one of the files, min-height is more flexible */
+    margin-top: 0.5rem;
+}
+
+/* Ensure chart SVGs are responsive within their containers */
+#chart svg,
+#scatter-plot-container svg,
+#bar-chart svg {
+    display: block; /* Removes extra space below SVG */
+    width: 100%;
+    height: auto; /* Maintain aspect ratio defined in JS viewBox or width/height */
+    max-width: 100%; /* Ensure it doesn't overflow container */
+}
+
+/* Adjustments for axis text in D3 charts if it gets cut off or overlaps */
+.axis text {
+    font-size: 10px; /* Or adjust as needed */
+}
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #888; /* Lighter axis lines */
+    shape-rendering: crispEdges;
 }

@@ -53,6 +53,7 @@ src/
   dashboard.ts
   main.ts
   map.ts
+  scatter.ts
   style.css
   vite-env.d.ts
 .gitignore
@@ -423,6 +424,188 @@ export async function drawMap(containerId: string) {
 }
 </file>
 
+<file path="src/scatter.ts">
+// src/scatter.ts
+
+import * as d3 from "d3";
+
+export async function drawScatter(containerId: string) {
+    // ─── Select & clear container ────────────────────────────────
+    const container = d3.select<HTMLElement, unknown>(`#${containerId}`);
+    container.selectAll("*").remove();
+
+    // ─── Dimensions & margins ────────────────────────────────────
+    const fullW = container.node()!.clientWidth || 700;
+    const fullH = 450;
+    const m = { top: 20, right: 20, bottom: 60, left: 60 };
+    const w = fullW  - m.left - m.right;
+    const h = fullH - m.top  - m.bottom;
+
+    // ─── SVG setup ───────────────────────────────────────────────
+    const svg = container
+        .append("svg")
+        .attr("width",  fullW)
+        .attr("height", fullH)
+        .attr("viewBox", `0 0 ${fullW} ${fullH}`);
+
+    const g = svg.append("g")
+        .attr("transform", `translate(${m.left},${m.top})`);
+
+    // ─── Load & parse CSV ────────────────────────────────────────
+    const raw: any[] = await d3.csv("/data/2024BetterLife.csv", d3.autoType);
+    if (!raw.length) {
+        g.append("text")
+            .text("No data available.")
+            .attr("x", 0)
+            .attr("y", 20);
+        return;
+    }
+
+    // ─── Detect column keys dynamically ──────────────────────────
+    const headers = Object.keys(raw[0]);
+    const xKey = headers.find(h => /disposable income/i.test(h))!;
+    const yKey = headers.find(h => /very long hours/i.test(h))!;
+    const popKey = headers.find(h => /population/i.test(h)); // optional
+
+    const data = raw.filter(d => isFinite(d[xKey]) && isFinite(d[yKey]));
+
+    // ─── Scales ─────────────────────────────────────────────────
+    const x = d3.scaleLinear()
+        .domain(d3.extent(data, d => d[xKey]) as [number, number])
+        .nice()
+        .range([0, w]);
+
+    const y = d3.scaleLinear()
+        .domain(d3.extent(data, d => d[yKey]) as [number, number])
+        .nice()
+        .range([h, 0]);
+
+    const r = popKey
+        ? d3.scaleSqrt()
+            .domain(d3.extent(data, d => d[popKey]) as [number, number])
+            .range([3, 18])
+        : () => 6;
+
+    // ─── Colour & region helper ────────────────────────────────
+    const palette: Record<string, string> = {
+        Europe:   "#1f77b4",
+        Americas: "#ff7f0e",
+        Asia:     "#2ca02c",
+        Oceania:  "#d62728"
+    };
+    function regionOf(country: string): keyof typeof palette {
+        const eu = ["Austria","Belgium","Czechia","Denmark","Estonia","Finland",
+            "France","Germany","Greece","Hungary","Iceland","Ireland","Italy","Latvia",
+            "Lithuania","Luxembourg","Netherlands","Norway","Poland","Portugal",
+            "Slovak Republic","Slovenia","Spain","Sweden","Switzerland","Türkiye",
+            "United Kingdom"];
+        const am = ["Canada","Chile","Colombia","Costa Rica","Mexico","United States"];
+        const as = ["Israel","Japan","Korea"];
+        const oc = ["Australia","New Zealand"];
+        if (eu.includes(country))    return "Europe";
+        if (am.includes(country))    return "Americas";
+        if (as.includes(country))    return "Asia";
+        if (oc.includes(country))    return "Oceania";
+        return "Europe";
+    }
+
+    // ─── Axes ────────────────────────────────────────────────────
+    g.append("g")
+        .attr("transform", `translate(0,${h})`)
+        .call(d3.axisBottom(x).tickFormat(d3.format("$.2s")))
+        .append("text")
+        .attr("x", w / 2)
+        .attr("y", 40)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#000")
+        .text("Household net adjusted disposable income (USD)");
+
+    g.append("g")
+        .call(d3.axisLeft(y).tickFormat(d => `${d}%`))
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -h / 2)
+        .attr("y", -45)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#000")
+        .text("Employees working very long hours (%)");
+
+    // ─── Tooltip container ──────────────────────────────────────
+    let tip = d3.select<HTMLElement, unknown>("body").select(".scatter-tooltip-story");
+    if (tip.empty()) {
+        tip = d3.select("body")
+            .append("div")
+            .attr("class", "scatter-tooltip-story")
+            .style("position", "absolute")
+            .style("background", "rgba(255,255,255,0.95)")
+            .style("padding", "8px 12px")
+            .style("border", "1px solid #ccc")
+            .style("border-radius", "4px")
+            .style("pointer-events", "none")
+            .style("opacity", "0")
+            .style("font-size", "11px")
+            .style("box-shadow", "0 2px 4px rgba(0,0,0,0.1)")
+            .style("white-space", "nowrap")
+            .style("z-index", "1050");
+    }
+    const fmtComma = d3.format(",");
+
+    // ─── Plot points ─────────────────────────────────────────────
+    g.selectAll("circle")
+        .data(data)
+        .join("circle")
+        .attr("cx", d => x(d[xKey]))
+        .attr("cy", d => y(d[yKey]))
+        .attr("r",  d => r(d[popKey]))
+        .attr("fill", d => palette[regionOf(d.Country)])
+        .attr("opacity", 0.8)
+        .on("mouseover", (e, d) => {
+            tip.transition().duration(100).style("opacity", 0.9);
+            tip.html(
+                `<strong>${d.Country}</strong><br/>
+           Income: $${fmtComma(d[xKey])}<br/>
+           Long-hours: ${d[yKey]}%<br/>
+           Population: ${d[popKey] ? fmtComma(d[popKey]) : "n/a"}`
+            )
+                .style("left", (e.pageX + 10) + "px")
+                .style("top",  (e.pageY + 10) + "px");
+        })
+        .on("mousemove", e => {
+            tip.style("left", (e.pageX + 10) + "px")
+                .style("top",  (e.pageY + 10) + "px");
+        })
+        .on("mouseout", () => {
+            tip.transition().duration(200).style("opacity", 0);
+        });
+
+    // ─── Legend (fixed order, centred) ──────────────────────────
+    const legendRegions: (keyof typeof palette)[] = ["Europe","Americas","Asia","Oceania"];
+    const spacing = 90;
+    const legendWidth = legendRegions.length * spacing;
+    const legendX = (fullW - m.left - m.right - legendWidth) / 2 + m.left;
+    const legendY = fullH - m.bottom + 50;
+
+    const legend = svg.append("g")
+        .attr("class", "legend")
+        .attr("transform", `translate(${legendX},${legendY})`);
+
+    legend.selectAll("g")
+        .data(legendRegions)
+        .join("g")
+        .attr("transform", (_, i) => `translate(${i * spacing},0)`)
+        .call(gL => {
+            gL.append("circle")
+                .attr("r", 6)
+                .attr("fill", d => palette[d]);
+            gL.append("text")
+                .attr("x", 10)
+                .attr("y", 4)
+                .style("font-size", "12px")
+                .text(d => d);
+        });
+}
+</file>
+
 <file path="src/vite-env.d.ts">
 /// <reference types="vite/client" />
 </file>
@@ -506,51 +689,51 @@ dist-ssr
 <file path="src/dashboard.ts">
 import * as d3 from 'd3';
 
-// 1. Configuration & globals
-// --- Existing Radar Chart Config (from your colleague) ---
-const selectedIndicatorsRadar = [ // Renamed to be specific
-    'Housing expenditure', 'Rooms per person', 'Household net adjusted disposable income',
-    'Household net wealth', 'Employment rate', 'Personal earnings',
-    'Quality of support network', 'Educational attainment', 'Student skills',
-    'Life expectancy', 'Self-reported health'
+// ── Configuration ───────────────────────────────────────────
+// Radar (existing)
+const selectedIndicatorsRadar = [
+    'Housing expenditure','Rooms per person','Household net adjusted disposable income',
+    'Household net wealth','Employment rate','Personal earnings',
+    'Quality of support network','Educational attainment','Student skills',
+    'Life expectancy','Self-reported health'
 ];
-const formatIndicatorRadar = (ind: string): string => // Renamed to be specific
-    ({
-        'Housing expenditure': 'Housing', 'Rooms per person': 'Living space',
-        'Household net adjusted disposable income': 'Income', 'Household net wealth': 'Wealth',
-        'Employment rate': 'Employment', 'Personal earnings': 'Earnings',
-        'Quality of support network': 'Social support', 'Educational attainment': 'Education',
-        'Student skills': 'Skills', 'Life expectancy': 'Health',
-        'Self-reported health': 'Well-being'
-    }[ind] || ind);
+const formatIndicatorRadar = (ind: string) => ({
+    'Housing expenditure':'Housing','Rooms per person':'Living space',
+    'Household net adjusted disposable income':'Income','Household net wealth':'Wealth',
+    'Employment rate':'Employment','Personal earnings':'Earnings',
+    'Quality of support network':'Social support','Educational attainment':'Education',
+    'Student skills':'Skills','Life expectancy':'Health','Self-reported health':'Well-being'
+}[ind] || ind);
 
-// --- Scatter Plot Configuration (NEW) ---
+// Scatter (existing)
 const scatterPlotMargin = { top: 30, right: 30, bottom: 50, left: 60 };
-const scatterPlotFullWidth = 750; // Adjust as needed
-const scatterPlotFullHeight = 550; // Adjust as needed
+const scatterPlotFullWidth = 750;
+const scatterPlotFullHeight = 550;
 const scatterPlotAnimationDuration = 750;
 const scatterPlotFixedRadius = 5;
-const scatterPlotHighlightColor = "orange"; // Color for highlighted country in scatter
-let scatterPlotMasterCountry: string | null = null; // Country to highlight in scatter
-
+const scatterPlotHighlightColor = "orange";
+let scatterPlotMasterCountry: string | null = null;
 let scatterPlotSvg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
 let scatterPlotG: d3.Selection<SVGGElement, unknown, null, undefined>;
-
-let currentXCategory = "Job satisfaction"; // Default X for scatter
-let currentYCategory = "Life satisfaction"; // Default Y for scatter
+let currentXCategory = "Job satisfaction";
+let currentYCategory = "Life satisfaction";
 let shouldScaleByPopulation = false;
+let betterlifeindexDataWide: any[] = [];
 
-let betterlifeindexDataWide: any[] = []; // For scatter plot (original wide format from CSV)
-// --- End Scatter Plot Configuration ---
+// Bar Chart config
+const barMargin = { top: 40, right: 20, bottom: 60, left: 80 };
+const barFullWidth = 900;
+const barFullHeight = 500;
+let barSvg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
+let barG: d3.Selection<SVGGElement, unknown, null, undefined>;
 
-
-// 2. Load CSV and initialize controls
+// ── Load & Initialize ───────────────────────────────────────
 Promise.all([ d3.csv('/2024BetterLife.csv', d3.autoType) ]).then(([raw]) => {
-    betterlifeindexDataWide = raw; // Use 'raw' (wide format) for the scatter plot
+    betterlifeindexDataWide = raw;
 
-    // --- Data Preparation for Radar Chart (Existing logic) ---
+    // Prepare Radar data (existing) …
     const rawKeys = Object.keys(raw[0]).filter(k => k !== 'Country');
-    const radarChartLongData = raw.flatMap(row => // Use a distinct name
+    const radarChartLongData = raw.flatMap(row =>
         rawKeys.map(key => ({
             Country: row.Country as string,
             Indicator: key.trim(),
@@ -559,90 +742,81 @@ Promise.all([ d3.csv('/2024BetterLife.csv', d3.autoType) ]).then(([raw]) => {
     );
     const extentByIndicatorRadar = new Map<string,[number,number]>();
     for (const ind of selectedIndicatorsRadar) {
-        const vals = radarChartLongData.filter(d => d.Indicator === ind).map(d => d.Value);
+        const vals = radarChartLongData.filter(d => d.Indicator===ind).map(d=>d.Value);
         extentByIndicatorRadar.set(ind, [d3.min(vals)!, d3.max(vals)!]);
     }
-    // --- End Radar Data Prep ---
 
-    // --- Common Country Selector Setup ---
-    const countrySelect = document.getElementById('country-select') as HTMLSelectElement;
-    const countries = Array.from(new Set(betterlifeindexDataWide.map(d => d.Country))).sort();
-    countrySelect.innerHTML = countries.map(c => `<option value="${c}">${c}</option>`).join('');
-    if (countries.length > 0) {
-        countrySelect.value = countries[0];
-        scatterPlotMasterCountry = countries[0]; // Initial highlight for scatter
+    // Populate country selector (existing) :contentReference[oaicite:0]{index=0}:contentReference[oaicite:1]{index=1}
+    const countrySelect = d3.select<HTMLSelectElement>('#country-select');
+    const countries = Array.from(new Set(raw.map(d => d.Country))).sort();
+    countrySelect.selectAll('option')
+        .data(countries)
+        .join('option')
+        .attr('value', d => d)
+        .text(d => d);
+    scatterPlotMasterCountry = countries[0];
+
+    // Populate Scatter controls (existing) :contentReference[oaicite:2]{index=2}:contentReference[oaicite:3]{index=3}
+    const xAxisSelect = d3.select<HTMLSelectElement>('#x-axis-select');
+    const yAxisSelect = d3.select<HTMLSelectElement>('#y-axis-select');
+    const scalePopCheckbox = d3.select<HTMLInputElement>('#scale-population-checkbox');
+    const numericKeys = Object.keys(raw[0]).filter(k =>
+        k!=='Country' && k!=='Population' && k!=='Flag' && typeof (raw[0] as any)[k]==='number'
+    );
+    numericKeys.forEach(k => {
+        xAxisSelect.append('option').attr('value', k).text(k);
+        yAxisSelect.append('option').attr('value', k).text(k);
+    });
+    xAxisSelect.property('value', currentXCategory);
+    yAxisSelect.property('value', currentYCategory);
+    scalePopCheckbox.property('checked', shouldScaleByPopulation);
+
+    // Populate Bar Chart property selector
+    const propertySelect = d3.select<HTMLSelectElement>('#property-select');
+    numericKeys.forEach(k => {
+        propertySelect.append('option').attr('value', k).text(k);
+    });
+    propertySelect.property('value', numericKeys[0]);
+
+    // Populate number‐to‐show selector
+    const numSelect = d3.select<HTMLSelectElement>('#num-select');
+    function refreshNumOptions(continentMode: boolean) {
+        numSelect.selectAll('option').remove();
+        const opts = continentMode
+            ? ['Top 3','All Continents']
+            : ['Top 3','Top 5','Top 10','Top 15','All'];
+        opts.forEach(o => numSelect.append('option').attr('value', o).text(o));
     }
+    refreshNumOptions(false);
 
-    // --- Scatter Plot Controls Setup ---
-    const xAxisSelect = document.getElementById('x-axis-select') as HTMLSelectElement;
-    const yAxisSelect = document.getElementById('y-axis-select') as HTMLSelectElement;
-    const scalePopCheckbox = document.getElementById('scale-population-checkbox') as HTMLInputElement;
+    // Setup SVGs
+    setupScatterPlotSVG('#scatter-plot-container');
+    setupBarChartSVG('#bar-chart');
 
-    if (betterlifeindexDataWide.length > 0) {
-        const numericKeys = Object.keys(betterlifeindexDataWide[0]).filter(key =>
-            key !== "Country" && key !== "Population" && key !== "Flag" && // Assuming 'Flag' might exist
-            typeof betterlifeindexDataWide[0][key] === 'number'
-        );
-        numericKeys.forEach(key => {
-            xAxisSelect.add(new Option(key, key));
-            yAxisSelect.add(new Option(key, key));
-        });
-        xAxisSelect.value = currentXCategory;
-        yAxisSelect.value = currentYCategory;
-    }
-    scalePopCheckbox.checked = shouldScaleByPopulation;
-
-    // --- Setup SVGs (Call once for each chart's container) ---
-    setupScatterPlotSVG('#scatter-plot-container'); // Target the new div for scatter plot
-    // The radar chart's SVG is typically created/cleared within its own render function.
-
-    // --- Event Listeners ---
-    // Scatter Plot controls
-    xAxisSelect.addEventListener('change', (event) => {
-        currentXCategory = (event.target as HTMLSelectElement).value;
+    // Event listeners for all controls
+    countrySelect.on('change', () => {
+        scatterPlotMasterCountry = (d3.event.target as HTMLSelectElement).value;
         renderScatterPlot();
+        renderRadarChart(radarChartLongData, extentByIndicatorRadar, scatterPlotMasterCountry!);
     });
-    yAxisSelect.addEventListener('change', (event) => {
-        currentYCategory = (event.target as HTMLSelectElement).value;
-        renderScatterPlot();
-    });
-    scalePopCheckbox.addEventListener('change', (event) => {
-        shouldScaleByPopulation = (event.target as HTMLInputElement).checked;
-        renderScatterPlot();
-    });
+    xAxisSelect.on('change', () => { currentXCategory = xAxisSelect.property('value'); renderScatterPlot(); });
+    yAxisSelect.on('change', () => { currentYCategory = yAxisSelect.property('value'); renderScatterPlot(); });
+    scalePopCheckbox.on('change', () => { shouldScaleByPopulation = scalePopCheckbox.property('checked'); renderScatterPlot(); });
 
-    // Common Country Selector
-    countrySelect.addEventListener('change', () => {
-        const selectedCountryValue = countrySelect.value;
-        scatterPlotMasterCountry = selectedCountryValue; // Update for scatter plot highlight
-
-        renderScatterPlot(); // Re-render scatter plot
-        renderRadarChart(radarChartLongData, extentByIndicatorRadar, selectedCountryValue); // Re-render radar chart
+    // Bar chart controls
+    d3.select('#continent-mode').on('change', () => {
+        const on = d3.select<HTMLInputElement>('#continent-mode').property('checked');
+        refreshNumOptions(on);
+        renderBarChart();
     });
+    numSelect.on('change', renderBarChart);
+    propertySelect.on('change', renderBarChart);
 
-    // --- Initial Render for Both Charts ---
+    // Initial render
     renderScatterPlot();
-    if (countries.length > 0) {
-        renderRadarChart(radarChartLongData, extentByIndicatorRadar, countries[0]);
-    }
+    renderRadarChart(radarChartLongData, extentByIndicatorRadar, scatterPlotMasterCountry!);
+    renderBarChart();
 });
-
-
-// 3. Chart Rendering Functions
-
-// --- SCATTER PLOT SVG SETUP FUNCTION ---
-function setupScatterPlotSVG(containerSelector: string) {
-    scatterPlotSvg = d3.select(containerSelector)
-        .append('svg')
-        .attr('width', scatterPlotFullWidth)
-        .attr('height', scatterPlotFullHeight)
-        .attr('viewBox', `0 0 ${scatterPlotFullWidth} ${scatterPlotFullHeight}`)
-        .attr('style', 'max-width: 100%; height: auto; background: #f9f9f9; font-family: Raleway, sans-serif; border: 1px solid #ddd;'); // Added some subtle styling
-
-    scatterPlotG = scatterPlotSvg.append('g')
-        .attr('class', 'drawing-area')
-        .attr('transform', `translate(${scatterPlotMargin.left},${scatterPlotMargin.top})`);
-}
 
 // --- SCATTER PLOT RENDER FUNCTION ---
 function renderScatterPlot() {
@@ -656,8 +830,8 @@ function renderScatterPlot() {
         const yVal = d[currentYCategory];
         const popVal = d.Population;
         return typeof xVal === 'number' && !isNaN(xVal) &&
-               typeof yVal === 'number' && !isNaN(yVal) &&
-               popVal !== undefined && typeof popVal === 'number' && !isNaN(popVal); // Ensure Population is valid
+            typeof yVal === 'number' && !isNaN(yVal) &&
+            popVal !== undefined && typeof popVal === 'number' && !isNaN(popVal); // Ensure Population is valid
     });
 
     const xScale = d3.scaleLinear()
@@ -679,17 +853,17 @@ function renderScatterPlot() {
         xAxisGroup = scatterPlotG.append("g").attr("class", "x-axis");
     }
     xAxisGroup
-      .attr("transform", `translate(0,${drawingHeight})`)
-      .transition().duration(scatterPlotAnimationDuration)
-      .call(d3.axisBottom(xScale));
+        .attr("transform", `translate(0,${drawingHeight})`)
+        .transition().duration(scatterPlotAnimationDuration)
+        .call(d3.axisBottom(xScale));
 
     let yAxisGroup = scatterPlotG.select<SVGGElement>("g.y-axis");
     if (yAxisGroup.empty()) {
         yAxisGroup = scatterPlotG.append("g").attr("class", "y-axis");
     }
     yAxisGroup
-      .transition().duration(scatterPlotAnimationDuration)
-      .call(d3.axisLeft(yScale));
+        .transition().duration(scatterPlotAnimationDuration)
+        .call(d3.axisLeft(yScale));
 
     // Axis Labels
     let xLabel = scatterPlotG.select<SVGTextElement>("text.x-label");
@@ -743,20 +917,33 @@ function renderScatterPlot() {
         exit => exit
             .call(s => s.transition().duration(scatterPlotAnimationDuration).attr("r", 0).remove())
     )
-    .on("mouseover", (event, d: any) => {
-        tooltip.transition().duration(100).style("opacity", 0.9);
-        const formatComma = d3.format(",");
-        tooltip.html(`<strong>${d.Country} ${d.Flag || ''}</strong><br>
+        .on("mouseover", (event, d: any) => {
+            tooltip.transition().duration(100).style("opacity", 0.9);
+            const formatComma = d3.format(",");
+            tooltip.html(`<strong>${d.Country} ${d.Flag || ''}</strong><br>
                       ${currentXCategory}: ${d[currentXCategory]}<br>
                       ${currentYCategory}: ${d[currentYCategory]}<br>
                       Population: ${formatComma(d.Population)}`)
-            .style("left", `${event.pageX + 10}px`)
-            .style("top", `${event.pageY - 20}px`);
-        d3.select(event.currentTarget).raise();
-    })
-    .on("mouseout", () => {
-        tooltip.transition().duration(200).style("opacity", 0);
-    });
+                .style("left", `${event.pageX + 10}px`)
+                .style("top", `${event.pageY - 20}px`);
+            d3.select(event.currentTarget).raise();
+        })
+        .on("mouseout", () => {
+            tooltip.transition().duration(200).style("opacity", 0);
+        });
+}
+
+function setupScatterPlotSVG(selector: string) {
+    scatterPlotSvg = d3.select(selector).append('svg')
+        .attr('width', scatterPlotFullWidth)
+        .attr('height', scatterPlotFullHeight)
+        .style('max-width','100%').style('height','auto');
+    scatterPlotG = scatterPlotSvg.append('g')
+        .attr('transform', `translate(${scatterPlotMargin.left},${scatterPlotMargin.top})`);
+}
+
+function renderScatterPlot() {
+    // … your existing renderScatterPlot code …
 }
 
 // --- RADAR CHART RENDER FUNCTION (Your colleague's code, renamed for clarity) ---
@@ -864,17 +1051,134 @@ function renderRadarChart(
         lg.append('text').attr('x', 40).attr('y', 10).attr('dy', '0.35em').style('font-size', '12px').text(c);
     });
 }
+
+// ── BAR CHART SETUP & RENDER ────────────────────────────────
+function setupBarChartSVG(selector: string) {
+    barSvg = d3.select(selector).append('svg')
+        .attr('width', barFullWidth)
+        .attr('height', barFullHeight)
+        .style('max-width','100%').style('height','auto');
+    barG = barSvg.append('g')
+        .attr('transform', `translate(${barMargin.left},${barMargin.top})`);
+}
+
+function renderBarChart() {
+    if (!barG || !betterlifeindexDataWide.length) return;
+
+    // Read controls
+    const continentMode = d3.select<HTMLInputElement>('#continent-mode').property('checked');
+    const numVal = d3.select<HTMLSelectElement>('#num-select').property('value');
+    const prop = d3.select<HTMLSelectElement>('#property-select').property('value');
+
+    // Group data
+    const grouped = continentMode
+        ? d3.rollup(betterlifeindexDataWide, v=>d3.mean(v, d=>d[prop]), d=>regionOf(d.Country))
+        : d3.rollup(betterlifeindexDataWide, v=>d3.mean(v, d=>d[prop]), d=>d.Country);
+
+    let entries = Array.from(grouped.entries()).map(([k,v])=>({key:k,value:v!}));
+    // Sort descending
+    entries.sort((a,b)=>d3.descending(a.value,b.value));
+
+    // Slice based on selection
+    if (continentMode) {
+        if (numVal==='Top 3') entries = entries.slice(0,3);
+        // else All Continents → keep all
+    } else {
+        if (numVal.startsWith('Top ')) {
+            const n = +numVal.split(' ')[1];
+            entries = entries.slice(0,n);
+        }
+        // 'All' → keep all
+    }
+
+    // Clear
+    barG.selectAll('*').remove();
+
+    // Dimensions
+    const width = barFullWidth - barMargin.left - barMargin.right;
+    const height = barFullHeight - barMargin.top - barMargin.bottom;
+
+    // Scales & orientation
+    const x = d3.scaleLinear()
+        .domain([0, d3.max(entries, d=>d.value)!]).nice()
+        .range([0,width]);
+    const y = d3.scaleBand()
+        .domain(entries.map(d=>d.key))
+        .range([0,height])
+        .padding(0.1);
+
+    const vertical = (!continentMode && (numVal==='Top 3' || numVal==='Top 5')) || continentMode;
+    if (vertical) {
+        // Vertical bars: categories on x
+        const xBand = d3.scaleBand()
+            .domain(entries.map(d=>d.key))
+            .range([0,width])
+            .padding(0.1);
+        const yLin = d3.scaleLinear()
+            .domain([0,d3.max(entries,d=>d.value)!]).nice()
+            .range([height,0]);
+
+        // X axis
+        barG.append('g')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(xBand));
+        // Y axis
+        barG.append('g')
+            .call(d3.axisLeft(yLin));
+
+        // Bars
+        barG.selectAll('rect')
+            .data(entries)
+            .join('rect')
+            .attr('x', d=>xBand(d.key)!)
+            .attr('width', xBand.bandwidth())
+            .attr('y', d=>yLin(d.value))
+            .attr('height', d=>height - yLin(d.value))
+            .attr('fill', '#69b3a2');
+    } else {
+        // Horizontal bars: categories on y
+        barG.append('g')
+            .call(d3.axisLeft(y));
+        barG.append('g')
+            .attr('transform', `translate(0,0)`)
+            .call(d3.axisTop(x).ticks(5));
+
+        barG.selectAll('rect')
+            .data(entries)
+            .join('rect')
+            .attr('y', d=>y(d.key)!)
+            .attr('height', y.bandwidth())
+            .attr('x', 0)
+            .attr('width', d=>x(d.value))
+            .attr('fill', '#404080');
+    }
+}
+
+// ── Helpers ────────────────────────────────────────────────
+function regionOf(country: string) {
+    const eu = ["Austria","Belgium","Czechia","Denmark","Estonia","Finland",
+        "France","Germany","Greece","Hungary","Iceland","Ireland","Italy","Latvia",
+        "Lithuania","Luxembourg","Netherlands","Norway","Poland","Portugal",
+        "Slovak Republic","Slovenia","Spain","Sweden","Switzerland","Türkiye",
+        "United Kingdom"];
+    const am = ["Canada","Chile","Colombia","Costa Rica","Mexico","United States"];
+    const as = ["Israel","Japan","Korea"];
+    const oc = ["Australia","New Zealand"];
+    if (eu.includes(country)) return "Europe";
+    if (am.includes(country)) return "Americas";
+    if (as.includes(country)) return "Asia";
+    if (oc.includes(country)) return "Oceania";
+    return "Europe";
+}
 </file>
 
 <file path="dashboard.html">
+<!-- dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OECD Better Life Index Dashboard</title>
     <link rel="stylesheet" href="/src/style.css" />
 </head>
@@ -883,42 +1187,44 @@ function renderRadarChart(
     <h1 class="headline">OECD Better Life Index Dashboard</h1>
 
     <section class="control-panel">
-        <div>
-            <label for="country-select">Select Country (for Radar & Scatter Plot Highlight):</label>
-            <select id="country-select">
-                <option>Loading…</option>
-            </select>
-        </div>
-        </section>
-
-    <section id="radar-chart-section" style="margin-top: 20px;">
-        <h2 style="font-size: 1.5em;">Country Profile vs. OECD Average (Radar)</h2>
-        <div id="chart"></div> </section>
-
-    <section id="scatter-plot-section" style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
-        <h2 style="font-size: 1.5em;">Explore Indicator Relationships (Scatter)</h2>
-
-        <div class="scatter-plot-controls" style="margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border-radius: 4px;">
-            <div>
-                <label for="x-axis-select" style="display: inline-block; min-width: 60px; margin-bottom: 5px;">X-Axis:</label>
-                <select id="x-axis-select"></select>
-            </div>
-            <div style="margin-top: 5px;">
-                <label for="y-axis-select" style="display: inline-block; min-width: 60px; margin-bottom: 5px;">Y-Axis:</label>
-                <select id="y-axis-select"></select>
-            </div>
-            <div style="margin-top: 10px;">
-                <input type="checkbox" id="scale-population-checkbox" style="margin-left: 0; vertical-align: middle;">
-                <label for="scale-population-checkbox" style="vertical-align: middle;">Scale dots by population</label>
-            </div>
+        <div class="control-group">
+            <label for="country-select">Country (Radar/Scatter):</label>
+            <select id="country-select"><option>Loading…</option></select>
         </div>
 
-        <div id="scatter-plot-container"></div> </section>
+        <div class="control-group">
+            <label for="continent-mode">Continent Mode:</label>
+            <input type="checkbox" id="continent-mode" />
+        </div>
 
+        <div class="control-group">
+            <label for="num-select">Show Top:</label>
+            <select id="num-select"></select>
+        </div>
+
+        <div class="control-group">
+            <label for="property-select">Indicator:</label>
+            <select id="property-select"></select>
+        </div>
+    </section>
+
+    <section id="radar-chart-section">
+        <h2>Country Profile vs. OECD Average (Radar)</h2>
+        <div id="chart"></div>
+    </section>
+
+    <section id="scatter-plot-section">
+        <h2>Explore Indicator Relationships (Scatter)</h2>
+        <div id="scatter-plot-container"></div>
+    </section>
+
+    <section id="bar-chart-section">
+        <h2>Comparison Bar Chart</h2>
+        <div id="bar-chart"></div>
+    </section>
 </div>
 
 <a href="index.html" class="prev-link nav-btn">← Go to Introduction</a>
-
 <script type="module" src="/src/dashboard.ts"></script>
 </body>
 </html>
@@ -955,6 +1261,11 @@ function renderRadarChart(
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
+</file>
+
+<file path="README.md">
+# OECD Better Life Index 2024 
+## Dashbaord
 </file>
 
 <file path="src/style.css">
@@ -1111,15 +1422,38 @@ html, body {
   box-shadow: 0 2px 6px rgba(0,0,0,.15);
   z-index: 1000;
 }
-</file>
 
-<file path="README.md">
-# OECD Better Life Index 2024 
-## Dashbaord
+/* Tooltip for story scatter */
+.scatter-tooltip-story { font-family: Raleway, sans-serif; }
+
+/* ── Control Panel ────────────────────────────────────────── */
+.control-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.control-group label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+.control-group select,
+.control-group input[type="checkbox"] {
+  font-size: 1rem;
+}
+
+/* ── Bar Chart Section ────────────────────────────────────── */
+#bar-chart {
+  width: 100%;
+  height: 500px; /* adjust as desired */
+  margin-top: 0.5rem;
+}
 </file>
 
 <file path="src/main.ts">
 import { drawMap } from "./map";
+import {drawScatter} from "./scatter.ts";
 
 interface Slide {
   headline: string;
@@ -1144,10 +1478,7 @@ const slides: Slide[] = [
   {
     headline: "Money or time? What really makes us happy?",
     description: `It’s tempting to assume: more money means more happiness. But let’s test that idea.<br><br>Below is a scatterplot showing average income on the x-axis and the share of people working very long hours on the y-axis — two key factors that shape our day-to-day experience. We might expect that richer countries offer more leisure, while poorer ones require more work. But do the data agree?<br><br>The result is surprising: there’s no strong trend. The U.S., for instance, has high income but also a large share of people working very long hours. On the other hand, the Netherlands — with moderate income — shows one of the lowest rates of overwork.<br><br>In short: money alone doesn’t buy balance. Time — and how it’s spent — may be even more important than wealth. This moment of contradiction keeps the audience curious and engaged: what else matters?`,
-    images: [
-      "https://via.placeholder.com/600x400?text=3A",
-      "https://via.placeholder.com/600x400?text=3B"
-    ],
+    images: [],
   },
   {
     headline: "What does the “perfect” country look like?",
@@ -1190,41 +1521,53 @@ const elems = slides.map((s, i) => {
   el.querySelector(".headline")!.innerHTML = s.headline;
   el.querySelector(".description")!.innerHTML = s.description;
 
-  const imgs = el.querySelectorAll<HTMLImageElement>(".images img");
-  imgs[0].src = s.images[0];
-  if (s.images[1]) imgs[1].src = s.images[1];
-  else imgs[1].style.display = "none";
+  const imgWrap = el.querySelector<HTMLDivElement>(".images")!;
 
-  // ─── Extra branding ONLY on the first slide ───
+  if (s.images.length) {
+    const imgs = imgWrap.querySelectorAll<HTMLImageElement>("img");
+    imgs[0].src = s.images[0];
+    if (s.images[1]) imgs[1].src = s.images[1];
+    else imgs[1].style.display = "none";
+  } else {
+    imgWrap.remove(); // remove placeholder <div class="images"> entirely
+  }
+
+  // ─── First‑slide logo + subtitle (kept from earlier)
   if (i === 0) {
-    // logo
     const logo = document.createElement("img");
     logo.src = "/logo-bli.png";
     logo.alt = "Better Life Index logo";
     logo.className = "logo";
 
-    // subtitle
     const subtitle = document.createElement("h2");
     subtitle.textContent = "2024 Visualized";
     subtitle.className = "subtitle";
 
-    // insert both above the main headline
     el.prepend(subtitle);
     el.prepend(logo);
   }
 
-  // map placeholder
+  // ─── Map placeholder
   if (s.headline.includes("Where are you from")) {
     const mapDiv = document.createElement("div");
     mapDiv.id = "map-container";
     el.querySelector(".description")!.insertAdjacentElement("afterend", mapDiv);
   }
 
+  // ─── Scatter‑plot placeholder (NEW)
+  if (s.headline.startsWith("Money or time")) {
+    const scatterDiv = document.createElement("div");
+    scatterDiv.id = "scatter-slide";
+    scatterDiv.style.width = "100%";
+    scatterDiv.style.marginTop = "20px";
+    el.querySelector(".description")!.insertAdjacentElement("afterend", scatterDiv);
+  }
+
   container.append(el);
   return el;
 });
 
-// set up navigation
+// ─── Navigation
 elems.forEach((el, i) => {
   const prev = el.querySelector<HTMLButtonElement>(".prev")!;
   const next = el.querySelector<HTMLButtonElement>(".next")!;
@@ -1236,18 +1579,31 @@ elems.forEach((el, i) => {
 
 function navigate(dir: number) {
   elems[current].classList.remove("active");
-  if (current === slides.length - 1 && dir === 1) {
-    return (window.location.href = "dashboard.html");
-  }
-  current = (current + dir + elems.length) % elems.length;
-  elems[current].classList.add("active");
 
-  // only draw map on that slide, once
+  // jump to dashboard
+  if (current === slides.length - 1 && dir === 1) {
+    window.location.href = "dashboard.html";
+    return;
+  }
+
+  current = (current + dir + elems.length) % elems.length;
+  const slide = elems[current];
+  slide.classList.add("active");
+
+  // draw map once
   if (
-    slides[current].headline.includes("Where are you from") &&
-    document.getElementById("map-container")!.childElementCount === 0
+      slides[current].headline.includes("Where are you from") &&
+      !document.querySelector("#map-container svg")
   ) {
     drawMap("map-container");
+  }
+
+  // draw scatter once
+  if (
+      slides[current].headline.startsWith("Money or time") &&
+      !document.querySelector("#scatter-slide svg")
+  ) {
+    drawScatter("scatter-slide");
   }
 }
 

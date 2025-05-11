@@ -1,11 +1,9 @@
+<!-- dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OECD Better Life Index Dashboard</title>
     <link rel="stylesheet" href="/src/style.css" />
 </head>
@@ -14,42 +12,46 @@
     <h1 class="headline">OECD Better Life Index Dashboard</h1>
 
     <section class="control-panel">
-        <div>
-            <label for="country-select">Select Country (for Radar & Scatter Plot Highlight):</label>
-            <select id="country-select">
-                <option>Loading…</option>
-            </select>
+        <div class="control-group">
+            <label for="country-select">Country (Radar/Scatter):</label>
+            <select id="country-select"><option>Loading…</option></select>
         </div>
-        </section>
+    </section>
 
-    <section id="radar-chart-section" style="margin-top: 20px;">
-        <h2 style="font-size: 1.5em;">Country Profile vs. OECD Average (Radar)</h2>
-        <div id="chart"></div> </section>
+    <section id="radar-chart-section">
+        <h2>Country Profile vs. OECD Average (Radar)</h2>
+        <div id="chart"></div>
+    </section>
 
-    <section id="scatter-plot-section" style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
-        <h2 style="font-size: 1.5em;">Explore Indicator Relationships (Scatter)</h2>
+    <section id="scatter-plot-section">
+        <h2>Explore Indicator Relationships (Scatter)</h2>
+        <div id="scatter-plot-container"></div>
+    </section>
 
-        <div class="scatter-plot-controls" style="margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border-radius: 4px;">
-            <div>
-                <label for="x-axis-select" style="display: inline-block; min-width: 60px; margin-bottom: 5px;">X-Axis:</label>
-                <select id="x-axis-select"></select>
+    <section id="bar-chart-section">
+        <h2>Comparison Bar Chart</h2>
+
+        <!-- Moved controls here -->
+        <div class="bar-controls">
+            <div class="control-group">
+                <label for="continent-mode">Continent Mode:</label>
+                <input type="checkbox" id="continent-mode" />
             </div>
-            <div style="margin-top: 5px;">
-                <label for="y-axis-select" style="display: inline-block; min-width: 60px; margin-bottom: 5px;">Y-Axis:</label>
-                <select id="y-axis-select"></select>
+            <div class="control-group" id="num-select-group">
+                <label for="num-select">Show Top:</label>
+                <select id="num-select"></select>
             </div>
-            <div style="margin-top: 10px;">
-                <input type="checkbox" id="scale-population-checkbox" style="margin-left: 0; vertical-align: middle;">
-                <label for="scale-population-checkbox" style="vertical-align: middle;">Scale dots by population</label>
+            <div class="control-group">
+                <label for="property-select">Indicator:</label>
+                <select id="property-select"></select>
             </div>
         </div>
 
-        <div id="scatter-plot-container"></div> </section>
-
+        <div id="bar-chart"></div>
+    </section>
 </div>
 
 <a href="index.html" class="prev-link nav-btn">← Go to Introduction</a>
-
 <script type="module" src="/src/dashboard.ts"></script>
 </body>
 </html>

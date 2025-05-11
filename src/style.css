@@ -154,3 +154,27 @@ html, body {
 
 /* Tooltip for story scatter */
 .scatter-tooltip-story { font-family: Raleway, sans-serif; }
+
+/* ── Control Panel ────────────────────────────────────────── */
+.control-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.control-group label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+.control-group select,
+.control-group input[type="checkbox"] {
+  font-size: 1rem;
+}
+
+/* ── Bar Chart Section ────────────────────────────────────── */
+#bar-chart {
+  width: 100%;
+  height: 500px; /* adjust as desired */
+  margin-top: 0.5rem;
+}

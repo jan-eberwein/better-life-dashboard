@@ -155,3 +155,12 @@ function navigate(dir: number) {
 
 // show first slide
 elems[0].classList.add("active");
+
+// ← / → arrow keys
+document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") {
+      navigate(1);
+    } else if (e.key === "ArrowLeft") {
+      navigate(-1);
+    }
+  });

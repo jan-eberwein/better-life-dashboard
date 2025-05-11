@@ -1,5 +1,6 @@
+// src/main.ts
+import { drawScatter } from "./scatter";
 import { drawMap } from "./map";
-import {drawScatter} from "./scatter.ts";
 
 interface Slide {
   headline: string;
@@ -13,7 +14,7 @@ const slides: Slide[] = [
     description: `What makes for a good life? Many people might say “money” or “career success,” but quality of life goes far beyond income. The OECD Better Life Index 2024 compares countries not just economically, but across 11 key dimensions that truly shape our daily lives — like health, education, environment, work-life balance, and social connection.<br><br>This project invites you to explore these factors interactively. Through data and storytelling, we’ll uncover where people are most satisfied with life in 2024 — and why.`,
     images: [
       "https://via.placeholder.com/600x400?text=1A",
-      "https://via.placeholder.com/600x400?text=1B"
+      "https://via.placeholder.com/600x400?text=1B",
     ],
   },
   {
@@ -34,10 +35,7 @@ const slides: Slide[] = [
   {
     headline: "Where are you from?",
     description: `Curious about your own country? Use the dropdown below to see how it stacks up against others. Discover where it excels—and where it still has room to grow.`,
-    images: [
-      "https://via.placeholder.com/600x400?text=5A",
-      "https://via.placeholder.com/600x400?text=5B"
-    ],
+    images: [],
   },
   {
     headline: "Explore more: create your own comparisons",
@@ -56,69 +54,71 @@ const slides: Slide[] = [
     ],
   },
 ];
-
 let current = 0;
 const container = document.querySelector<HTMLDivElement>(".slide-container")!;
-const template = container.querySelector<HTMLDivElement>(".slide")!;
+const template  = container.querySelector<HTMLDivElement>(".slide")!;
 template.remove();
 
 const elems = slides.map((s, i) => {
   const el = template.cloneNode(true) as HTMLDivElement;
-  el.querySelector(".headline")!.innerHTML = s.headline;
+  el.querySelector(".headline")!.innerHTML    = s.headline;
   el.querySelector(".description")!.innerHTML = s.description;
 
+  // images
   const imgWrap = el.querySelector<HTMLDivElement>(".images")!;
-
   if (s.images.length) {
     const imgs = imgWrap.querySelectorAll<HTMLImageElement>("img");
     imgs[0].src = s.images[0];
     if (s.images[1]) imgs[1].src = s.images[1];
     else imgs[1].style.display = "none";
   } else {
-    imgWrap.remove(); // remove placeholder <div class="images"> entirely
+    imgWrap.remove();
   }
 
-  // ─── First‑slide logo + subtitle (kept from earlier)
+  // first‐slide logo + subtitle
   if (i === 0) {
     const logo = document.createElement("img");
-    logo.src = "/logo-bli.png";
-    logo.alt = "Better Life Index logo";
+    logo.src       = "/logo-bli.png";
+    logo.alt       = "Better Life Index logo";
     logo.className = "logo";
 
     const subtitle = document.createElement("h2");
-    subtitle.textContent = "2024 Visualized";
-    subtitle.className = "subtitle";
+    subtitle.textContent = "2024 Visualized";
+    subtitle.className   = "subtitle";
 
     el.prepend(subtitle);
     el.prepend(logo);
   }
 
-  // ─── Map placeholder
-  if (s.headline.includes("Where are you from")) {
+  // ─── Map placeholder only on the “Where are you from?” slide
+  if (s.headline === "Where are you from?") {
     const mapDiv = document.createElement("div");
     mapDiv.id = "map-container";
-    el.querySelector(".description")!.insertAdjacentElement("afterend", mapDiv);
+    // styling in CSS
+    el.querySelector(".description")!
+      .insertAdjacentElement("afterend", mapDiv);
   }
 
-  // ─── Scatter‑plot placeholder (NEW)
+  // ─── Scatter placeholder on the “Money or time?” slide
   if (s.headline.startsWith("Money or time")) {
     const scatterDiv = document.createElement("div");
     scatterDiv.id = "scatter-slide";
-    scatterDiv.style.width = "100%";
+    scatterDiv.style.width     = "100%";
     scatterDiv.style.marginTop = "20px";
-    el.querySelector(".description")!.insertAdjacentElement("afterend", scatterDiv);
+    el.querySelector(".description")!
+      .insertAdjacentElement("afterend", scatterDiv);
   }
 
   container.append(el);
   return el;
 });
 
-// ─── Navigation
+// navigation buttons
 elems.forEach((el, i) => {
   const prev = el.querySelector<HTMLButtonElement>(".prev")!;
   const next = el.querySelector<HTMLButtonElement>(".next")!;
-  if (i === 0) prev.style.visibility = "hidden";
-  if (i === slides.length - 1) next.textContent = "Go to Dashboard →";
+  prev.style.visibility = i === 0 ? "hidden" : "visible";
+  next.textContent      = i === slides.length - 1 ? "Go to Dashboard →" : "Next →";
   prev.onclick = () => navigate(-1);
   next.onclick = () => navigate(1);
 });
@@ -126,41 +126,36 @@ elems.forEach((el, i) => {
 function navigate(dir: number) {
   elems[current].classList.remove("active");
 
-  // jump to dashboard
+  // last slide → dashboard.html
   if (current === slides.length - 1 && dir === 1) {
     window.location.href = "dashboard.html";
     return;
   }
 
   current = (current + dir + elems.length) % elems.length;
-  const slide = elems[current];
-  slide.classList.add("active");
+  elems[current].classList.add("active");
 
-  // draw map once
+  // draw map when landing on “Where are you from?”
   if (
-      slides[current].headline.includes("Where are you from") &&
-      !document.querySelector("#map-container svg")
+    slides[current].headline === "Where are you from?" &&
+    !document.querySelector("#map-container svg")
   ) {
     drawMap("map-container");
   }
 
-  // draw scatter once
+  // draw scatter when landing on “Money or time?”
   if (
-      slides[current].headline.startsWith("Money or time") &&
-      !document.querySelector("#scatter-slide svg")
+    slides[current].headline.startsWith("Money or time") &&
+    !document.querySelector("#scatter-slide svg")
   ) {
     drawScatter("scatter-slide");
   }
 }
 
-// show first slide
 elems[0].classList.add("active");
 
 // ← / → arrow keys
 document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowRight") {
-      navigate(1);
-    } else if (e.key === "ArrowLeft") {
-      navigate(-1);
-    }
-  });
+  if (e.key === "ArrowRight") navigate(1);
+  else if (e.key === "ArrowLeft") navigate(-1);
+});

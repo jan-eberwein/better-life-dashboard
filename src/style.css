@@ -47,7 +47,7 @@ html, body {
 }
 .slide-container {
     width: 100%;
-    max-width: 800px; /* Or dashboard max-width if used for dashboard sections */
+    max-width: 1000px; /* Or dashboard max-width if used for dashboard sections */
 }
 
 /* 4 ▸ SLIDES (If applicable)
@@ -264,4 +264,99 @@ html, body {
     fill: none;
     stroke: #888; /* Lighter axis lines */
     shape-rendering: crispEdges;
+}
+
+
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap');
+
+body {
+  font-family: 'Raleway', sans-serif;
+}
+
+/* Controls */
+#controls {
+  width: 100%;
+  padding: 8px;
+  background: #fff;
+  border-bottom: 1px solid #ccc;
+}
+
+/* Country widget */
+#country-widget {
+  font-family: 'Raleway', sans-serif;
+  margin: 8px 0;
+  padding: 10px;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+}
+.widget-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.widget-header .flag {
+  font-size: 1.5em;
+}
+.widget-header .country-name {
+  font-weight: 600;
+  font-size: 1.2em;
+}
+.widget-header .pop {
+  margin-left: auto;
+  color: #555;
+}
+.widget-metrics {
+  margin-top: 8px;
+  list-style: none;
+  padding: 0;
+}
+.widget-metrics li {
+  font-size: 1em;
+  margin-bottom: 4px;
+}
+.widget-metrics .ls-value {
+  font-weight: 600;
+  color: inherit; /* will pick up inline style */
+}
+
+/* Tooltip */
+#tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(255,255,255,0.95);
+  border: 1px solid #999;
+  padding: 8px;
+  border-radius: 4px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.9em;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  z-index: 10;
+}
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.tooltip-header .flag {
+  font-size: 1.2em;
+}
+.tooltip-header .name {
+  font-weight: 600;
+}
+.tooltip-header .pop {
+  margin-left: auto;
+  font-size: 0.85em;
+  color: #555;
+}
+.tooltip-metric {
+  margin-bottom: 6px;
+}
+.tooltip-metric .ls-value {
+  font-weight: 600;
+  /* inline color is set by JS via style attribute */
+}
+.tooltip-chart {
+  display: block;
+  margin: 0 auto;
 }

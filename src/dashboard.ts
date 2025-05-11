@@ -408,7 +408,7 @@ function renderBarChart() {
             .attr('fill', '#69b3a2');
     } else {
         const xLin = d3.scaleLinear().domain([0, maxValue]).nice().range([0, drawingWidth]);
-        const yBand = d3.scaleBand().domain(entries.map(d => d.key)).range([drawingHeight, 0]).padding(0.1);
+        const yBand = d3.scaleBand().domain(entries.map(d => d.key)).range([0, drawingHeight]).padding(0.1);
         barG.append('g').call(d3.axisLeft(yBand));
         barG.append('g').call(d3.axisTop(xLin).ticks(drawingWidth / 80));
         barG.selectAll('rect.bar-rect')

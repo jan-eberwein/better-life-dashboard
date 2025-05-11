@@ -172,43 +172,100 @@ export async function drawMap(
     )
     .classed('hidden', false);
 
-    // Radar data
-    const metrics = [
-      { key: 'value', avg: oecdAvg.value },
-      { key: 'gdp',   avg: oecdAvg.gdp },
-      { key: 'leisure', avg: oecdAvg.leisure },
-      { key: 'rooms',  avg: oecdAvg.rooms }
+    // Radar chart comparing to OECD average
+    tooltip.selectAll('.tooltip-chart').remove();
+    const rc = tooltip.append('div').attr('class','tooltip-chart');
+    const indicators: (keyof DataRecord)[] = ['value','gdp','leisure','rooms'];
+    const angleStep = 2 * Math.PI / indicators.length;
+    const W = 150, H = 150, margin = 20;
+    const R = Math.min(W, H) / 2 - margin;
+
+    // Compute extents for each indicator
+    const extents = new Map<keyof DataRecord, [number, number]>(
+      indicators.map(ind => [ind, [
+        d3.min(data, d => d[ind])!,
+        d3.max(data, d => d[ind])!
+      ]])
+    );
+
+    // Prepare radar data for selected country and OECD avg
+    type Point = { angle: number; ratio: number }; 
+    const radarData: { country: string; points: Point[] }[] = [
+      { country: rec.country, points: [] },
+      { country: 'OECD', points: [] }
     ];
-    const radarData = metrics.map((m,i) => ({
-      angle: (i / metrics.length) * 2 * Math.PI,
-      radius: rec[m.key as keyof DataRecord] / m.avg
-    }));
-    const rMax = 30;
-    const rScale = d3.scaleLinear()
-      .domain([0, d3.max(radarData, d => d.radius)!])
-      .range([0, rMax]);
-    const radialLine = d3.lineRadial<[number,number]>()
-      .angle(d => d[0])
-      .radius(d => rScale(d[1]))
-      .curve(d3.curveLinearClosed);
-    const svgR = tooltip.append('svg')
-      .attr('class','tooltip-chart')
-      .attr('width', rMax*2+20)
-      .attr('height', rMax*2+20)
+    indicators.forEach((ind, i) => {
+      const [lo, hi] = extents.get(ind)!;
+      const scaleNorm = (lo === hi)
+        ? d3.scaleLinear([lo - 1, hi + 1], [0, 1])
+        : d3.scaleLinear([lo, hi], [0, 1]);
+      const valRec = rec[ind];
+      const avg = oecdAvg[ind as keyof typeof oecdAvg];
+      radarData[0].points.push({ angle: i * angleStep, ratio: scaleNorm(valRec) });
+      radarData[1].points.push({ angle: i * angleStep, ratio: scaleNorm(avg) });
+    });
+
+    // Create SVG for radar
+    const svgR = rc.append('svg')
+      .attr('width', W)
+      .attr('height', H)
       .append('g')
-      .attr('transform', `translate(${rMax+10},${rMax+10})`);
-    svgR.append('path')
-      .datum(radarData.map(d => [d.angle,d.radius] as [number,number]))
-      .attr('d', radialLine as any)
-      .attr('fill', 'rgba(50,150,250,0.3)')
-      .attr('stroke', '#3498db')
-      .attr('stroke-width', 1);
+      .attr('transform', `translate(${W/2},${H/2})`);
+
+    // Draw concentric circles
+    const levels = 4;
+    for (let lvl = 1; lvl <= levels; lvl++) {
+      svgR.append('circle')
+        .attr('r', R * lvl / levels)
+        .attr('fill', 'none')
+        .attr('stroke', '#ccc');
+    }
+
+    // Draw axes and labels
+    indicators.forEach((ind, i) => {
+      const ang = i * angleStep - Math.PI/2;
+      const x = R * Math.cos(ang);
+      const y = R * Math.sin(ang);
+      svgR.append('line')
+        .attr('x1', 0).attr('y1', 0)
+        .attr('x2', x).attr('y2', y)
+        .attr('stroke', '#999');
+      svgR.append('text')
+        .attr('x', (R + 10) * Math.cos(ang))
+        .attr('y', (R + 10) * Math.sin(ang))
+        .attr('dy', '0.35em')
+        .attr('text-anchor', Math.cos(ang) > 0 ? 'start' : 'end')
+        .style('font-size', '9px')
+        .text(ind === 'value' ? 'Life' : ind.charAt(0).toUpperCase()+ind.slice(1));
+    });
+
+    // Scale for radius
+    const rScale = d3.scaleLinear([0, 1], [0, R]);
+    const lineGen = d3.lineRadial<Point>()
+      .angle(d => d.angle - Math.PI/2)
+      .radius(d => rScale(d.ratio))
+      .curve(d3.curveLinearClosed);
+
+    // Colors: selected country red, OECD green
+    const colorRadar = d3.scaleOrdinal<string>()
+      .domain(radarData.map(d => d.country))
+      .range(['#e41a1c', '#4daf4a']);
+
+    radarData.forEach(series => {
+      svgR.append('path')
+        .datum(series.points)
+        .attr('d', lineGen as any)
+        .attr('fill', colorRadar(series.country))
+        .attr('fill-opacity', 0.3)
+        .attr('stroke', colorRadar(series.country))
+        .attr('stroke-width', 1.5);
+    });
   }
 
   function moveTooltip(event: MouseEvent) {
     tooltip
-      .style('left', `${event.pageX+10}px`)
-      .style('top', `${event.pageY+10}px`);
+      .style('left', `${event.pageX + 10}px`)
+      .style('top',  `${event.pageY + 10}px`);
   }
 
   // Update widget with country vs OECD avg
@@ -217,7 +274,7 @@ export async function drawMap(
     const header = widget.append('div').attr('class','widget-header');
     header.append('span').attr('class','flag').text(rec.flag);
     header.append('span').attr('class','country-name').text(rec.country);
-    header.append('span').attr('class','pop').text(`Population: ${(rec.population/1e6).toFixed(2)}M`);
+    header.append('span').attr('class','pop').text(`Pop: ${(rec.population/1e6).toFixed(2)}M`);
     const list = widget.append('ul').attr('class','widget-metrics');
     // Life satisfaction colored
     list.append('li')

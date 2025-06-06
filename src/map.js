@@ -1,4 +1,56 @@
-import * as d3 from 'd3';
+// src/map.js
+import * as d3 from "d3";
+
+// Category definitions
+const GROUPS = {
+  "Housing": [
+    "Dwellings without basic facilities",
+    "Housing expenditure",
+    "Rooms per person"
+  ],
+  "Income": [
+    "GDP per capita (USD)",
+    "Household net adjusted disposable income",
+    "Household net wealth",
+    "Personal earnings"
+  ],
+  "Jobs": [
+    "Labour market insecurity",
+    "Employment rate",
+    "Long-term unemployment rate"
+  ],
+  "Community": [
+    "Quality of support network"
+  ],
+  "Education": [
+    "Educational attainment",
+    "Student skills",
+    "Years in education"
+  ],
+  "Environment": [
+    "Air pollution",
+    "Water quality"
+  ],
+  "Civic Engagement": [
+    "Stakeholder engagement for developing regulations",
+    "Voter turnout"
+  ],
+  "Health": [
+    "Life expectancy",
+    "Self-reported health"
+  ],
+  "Life Satisfaction": [
+    "Life satisfaction"
+  ],
+  "Safety": [
+    "Feeling safe walking alone at night",
+    "Homicide rate"
+  ],
+  "Work-Life Balance": [
+    "Employees working very long hours",
+    "Time devoted to leisure and personal care"
+  ]
+};
 
 // A small mapping from GeoJSON names → your CSV names
 const GEO_TO_CSV = {
@@ -11,15 +63,59 @@ const GEO_TO_CSV = {
 export async function drawMap(containerId, options) {
   const opts = {
     containerId,
-    csvUrl: options && options.csvUrl ? options.csvUrl : '/data/2024BetterLife.csv',
-    geojsonUrl: options && options.geojsonUrl ? options.geojsonUrl : '/data/world.geojson'
+    csvUrl: options && options.csvUrl ? options.csvUrl : "/data/2024BetterLife.csv",
+    geojsonUrl: options && options.geojsonUrl ? options.geojsonUrl : "/data/world.geojson"
   };
 
   // Container & dimensions
   const container = document.getElementById(opts.containerId);
   if (!container) throw new Error(`Container '#${opts.containerId}' not found`);
-  const width  = container.clientWidth;
-  const height = container.clientHeight;
+  container.innerHTML = ""; // Clear previous
+
+  // Build a wrapper for widgets above the map
+  const widgetWrapper = document.createElement("div");
+  widgetWrapper.id = "widget-wrapper";
+  widgetWrapper.style.display = "flex";
+  widgetWrapper.style.gap = "8px";
+  widgetWrapper.style.marginBottom = "10px";
+  container.appendChild(widgetWrapper);
+
+  // Home country box (left)
+  const homeBox = document.createElement("div");
+  homeBox.id = "home-country-box";
+  homeBox.innerHTML = "<em>Home country:<br>None</em>";
+  widgetWrapper.appendChild(homeBox);
+
+  // Selected country box (right)
+  const selBox = document.createElement("div");
+  selBox.id = "selected-country-box";
+  selBox.innerHTML = "<em>Select a country<br>for details</em>";
+  widgetWrapper.appendChild(selBox);
+
+  // Now prepare region dropdown and map area
+  const controls = document.createElement("div");
+  controls.id = "controls";
+  controls.style.marginBottom = "8px";
+  container.appendChild(controls);
+  const label = document.createElement("label");
+  label.htmlFor = "region-select";
+  label.textContent = "Region:";
+  controls.appendChild(label);
+  const select = document.createElement("select");
+  select.id = "region-select";
+  select.style.marginLeft = "4px";
+  select.onchange = () => zoomTo(select.value);
+  ["World", "Europe", "Africa", "Asia", "Americas", "Oceania"].forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r;
+    opt.textContent = r;
+    select.appendChild(opt);
+  });
+  controls.appendChild(select);
+
+  // Compute width/height after adding controls and widgets
+  const width = container.clientWidth;
+  const height = container.clientHeight - widgetWrapper.offsetHeight - controls.offsetHeight;
 
   // Load CSV and GeoJSON
   const [rawCsv, worldGeo] = await Promise.all([
@@ -27,56 +123,79 @@ export async function drawMap(containerId, options) {
     d3.json(opts.geojsonUrl)
   ]);
 
-  // Parse CSV into typed records
+  // Parse CSV into typed records and compute group averages
   const data = rawCsv.map(row => {
     const t = {};
-    Object.entries(row).forEach(([k,v]) => {
+    Object.entries(row).forEach(([k, v]) => {
       t[k.trim()] = v;
     });
-    return {
-      country:    t['Country'],
-      flag:       t['Flag'],
-      value:      +t['Life satisfaction'],
-      gdp:        +t['GDP per capita (USD)'],
-      leisure:    +t['Time devoted to leisure and personal care'],
-      rooms:      +t['Rooms per person'],
-      population: +t['Population']
+    const rec = {
+      country: t["Country"],
+      flag: t["Flag"],
+      "Dwellings without basic facilities": +t["Dwellings without basic facilities"],
+      "Housing expenditure": +t["Housing expenditure"],
+      "Rooms per person": +t["Rooms per person"],
+      "GDP per capita (USD)": +t["GDP per capita (USD)"],
+      "Household net adjusted disposable income": +t["Household net adjusted disposable income"],
+      "Household net wealth": +t["Household net wealth"],
+      "Personal earnings": +t["Personal earnings"],
+      "Labour market insecurity": +t["Labour market insecurity"],
+      "Employment rate": +t["Employment rate"],
+      "Long-term unemployment rate": +t["Long-term unemployment rate"],
+      "Quality of support network": +t["Quality of support network"],
+      "Educational attainment": +t["Educational attainment"],
+      "Student skills": +t["Student skills"],
+      "Years in education": +t["Years in education"],
+      "Air pollution": +t["Air pollution"],
+      "Water quality": +t["Water quality"],
+      "Stakeholder engagement for developing regulations": +t["Stakeholder engagement for developing regulations"],
+      "Voter turnout": +t["Voter turnout"],
+      "Life expectancy": +t["Life expectancy"],
+      "Self-reported health": +t["Self-reported health"],
+      "Life satisfaction": +t["Life satisfaction"],
+      "Feeling safe walking alone at night": +t["Feeling safe walking alone at night"],
+      "Homicide rate": +t["Homicide rate"],
+      "Employees working very long hours": +t["Employees working very long hours"],
+      "Time devoted to leisure and personal care": +t["Time devoted to leisure and personal care"],
+      "Population": +t["Population"]
     };
+    // Compute group averages
+    rec.groupAvg = {};
+    Object.entries(GROUPS).forEach(([groupName, cols]) => {
+      const vals = cols
+        .map(c => rec[c])
+        .filter(v => v != null && !isNaN(v));
+      rec.groupAvg[groupName] = vals.length ? d3.mean(vals) : 0;
+    });
+    return rec;
   });
 
-  // Compute OECD averages
-  const oecdAvg = {
-    value:   d3.mean(data, d => d.value),
-    gdp:     d3.mean(data, d => d.gdp),
-    leisure: d3.mean(data, d => d.leisure),
-    rooms:   d3.mean(data, d => d.rooms)
-  };
+  // Compute OECD average by group
+  const oecdAvg = {};
+  Object.entries(GROUPS).forEach(([groupName]) => {
+    const allVals = data
+      .map(d => d.groupAvg[groupName])
+      .filter(v => v != null);
+    oecdAvg[groupName] = allVals.length ? d3.mean(allVals) : 0;
+  });
 
-  // Controls (region dropdown)
-  const controls = d3.select(container)
-    .append('div')
-    .attr('id', 'controls');
-  controls.append('label')
-    .attr('for', 'region-select')
-    .text('Region:');
-  const select = controls.append('select')
-    .attr('id', 'region-select')
-    .on('change', () => zoomTo(select.property('value')));
-  ['World','Europe','Africa','Asia','Americas','Oceania']
-    .forEach(r => select.append('option').attr('value', r).text(r));
+  // If a home country is stored, show it now
+  const storedName = localStorage.getItem("bli-selected-country");
+  let homeRec = null;
+  if (storedName) {
+    homeRec = data.find(d => d.country === storedName);
+    if (homeRec) {
+      updateComparisonWidgets(homeRec, null);
+    }
+  }
 
-  // Country detail widget (click target)
-  const widget = d3.select(container)
-    .append('div')
-    .attr('id', 'country-widget')
-    .html('<em>Click a country to see details</em>');
-
-  // SVG canvas
+  // SVG canvas for the map
   const svg = d3.select(container)
-    .append('svg')
-    .attr('id', 'map-svg')
-    .attr('width', width)
-    .attr('height', height);
+    .append("svg")
+    .attr("id", "map-svg")
+    .attr("width", width)
+    .attr("height", height)
+    .style("display", "block");
 
   const projection = d3.geoNaturalEarth1()
     .scale(width / (1.3 * Math.PI))
@@ -85,56 +204,67 @@ export async function drawMap(containerId, options) {
 
   // Tooltip for hover
   const tooltip = d3.select(container)
-    .append('div')
-    .attr('id', 'tooltip')
-    .classed('hidden', true);
-  d3.select(container).on('mouseleave', () => tooltip.classed('hidden', true));
+    .append("div")
+    .attr("id", "tooltip")
+    .classed("hidden", true)
+    .style("position", "absolute")
+    .style("pointer-events", "none")
+    .style("background", "rgba(255,255,255,0.95)")
+    .style("padding", "8px")
+    .style("border", "1px solid #999")
+    .style("border-radius", "4px")
+    .style("font-family", "'Raleway', sans-serif")
+    .style("font-size", "12px")
+    .style("z-index", "3");
+  d3.select(container).on("mouseleave", () => tooltip.classed("hidden", true));
 
   // Color scale by life satisfaction
   const colorScale = d3.scaleSequential(d3.interpolateRdYlGn)
-    .domain([d3.min(data, d => d.value), d3.max(data, d => d.value)]);
+    .domain([d3.min(data, d => d["Life satisfaction"]), d3.max(data, d => d["Life satisfaction"])]);
 
-  // Draw all countries
-  const g = svg.append('g');
-  g.selectAll('path.country')
+  // Draw countries
+  const g = svg.append("g");
+  g.selectAll("path.country")
     .data(worldGeo.features)
-    .enter().append('path')
-      .attr('class', 'country')
-      .attr('d', path)
-      .attr('fill', feat => {
+    .enter().append("path")
+      .attr("class", "country")
+      .attr("d", path)
+      .attr("fill", feat => {
         const name = feat.properties.name;
         const csvName = GEO_TO_CSV[name] || name;
         const rec = data.find(d => d.country === csvName);
-        return rec ? colorScale(rec.value) : '#eee';
+        return rec ? colorScale(rec["Life satisfaction"]) : "#eee";
       })
-      .attr('stroke', '#fff')
-      .attr('stroke-width', 0.5)
-      .on('mouseover', (_, feat) => showTooltip(feat))
-      .on('mousemove', moveTooltip)
-      .on('mouseout', () => tooltip.classed('hidden', true))
-      .on('click', (_, feat) => {
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 0.5)
+      .on("mouseover", (_, feat) => showTooltip(feat))
+      .on("mousemove", moveTooltip)
+      .on("mouseout", () => tooltip.classed("hidden", true))
+      .on("click", (_, feat) => {
         const name = feat.properties.name;
         const csvName = GEO_TO_CSV[name] || name;
         const rec = data.find(d => d.country === csvName);
         if (rec) {
-          localStorage.setItem('bli-selected-country', rec.country);
-          updateWidget(rec);
+          updateComparisonWidgets(homeRec, rec);
+          if (!homeRec) {
+            homeRec = rec;
+            localStorage.setItem("bli-selected-country", rec.country);
+            updateComparisonWidgets(homeRec, null);
+          }
         }
       });
 
   // Zoom behavior
   const zoom = d3.zoom()
     .scaleExtent([1, 8])
-    .on('zoom', e => g.attr('transform', e.transform));
+    .on("zoom", e => g.attr("transform", e.transform));
   svg.call(zoom);
 
-  // ───────────────────────────────────────────────────────────────────────────────
-  // **NEW**: set the dropdown to World and immediately zoom out to the full world
-  select.property('value', 'World');
-  zoomTo('World');
-  // ───────────────────────────────────────────────────────────────────────────────
+  // Initialize region dropdown
+  select.value = "World";
+  zoomTo("World");
 
-  // Region zoom helper
+  // ───────────────────────────────────────────────────────────────────────────────
   function zoomTo(region) {
     const boxes = {
       World:   [[-180,-90],[180,90]],
@@ -159,11 +289,75 @@ export async function drawMap(containerId, options) {
       );
   }
 
-  // Keep the existing tooltip + radar chart from hover
   function showTooltip(feat) {
     const name    = feat.properties.name;
     const csvName = GEO_TO_CSV[name] || name;
     const rec = data.find(d => d.country === csvName);
+    if (!rec) return;
+
+    // Radar chart snippet (Life, GDP, Leisure, Rooms)
+    const indicators = ["Life satisfaction", "GDP per capita (USD)", "Time devoted to leisure and personal care", "Rooms per person"];
+    const angleStep = 2 * Math.PI / indicators.length;
+    const W = 120, H = 120, margin = 10;
+    const R = Math.min(W, H)/2 - margin;
+    const extentsMap = new Map(
+      indicators.map(ind => [
+        ind,
+        [d3.min(data, d => d[ind]), d3.max(data, d => d[ind])]
+      ])
+    );
+    function computePoints(record) {
+      return indicators.map((ind, i) => {
+        const [lo, hi] = extentsMap.get(ind);
+        const norm = (lo === hi)
+          ? d3.scaleLinear().domain([lo-1, hi+1]).range([0, 1])
+          : d3.scaleLinear().domain([lo, hi]).range([0, 1]);
+        return { angle: i * angleStep, ratio: norm(record[ind]) };
+      });
+    }
+    const recPts  = computePoints(rec);
+    const oecdPts = computePoints(oecdAvg);
+    function polyPath(points) {
+      let d = "";
+      points.forEach((p, i) => {
+        const ang = p.angle - Math.PI/2;
+        const r   = R * p.ratio;
+        const x   = r * Math.cos(ang);
+        const y   = r * Math.sin(ang);
+        d += (i === 0 ? "M" : "L") + x + "," + y;
+      });
+      return d + "Z";
+    }
+    let radarSvgHtml = `<svg width="${W}" height="${H}"><g transform="translate(${W/2},${H/2})">`;
+    for (let lvl = 1; lvl <= 4; lvl++) {
+      radarSvgHtml += `<circle r="${(R * lvl / 4)}" fill="none" stroke="#ccc"/>`;
+    }
+    indicators.forEach((ind, i) => {
+      const ang = i * angleStep - Math.PI/2;
+      const xA = R * Math.cos(ang), yA = R * Math.sin(ang);
+      radarSvgHtml += `<line x1="0" y1="0" x2="${xA}" y2="${yA}" stroke="#999"/>`;
+      const labelX = (R + 12) * Math.cos(ang), labelY = (R + 12) * Math.sin(ang);
+      const lab = ind === "Life satisfaction" ? "Life" :
+                  ind === "GDP per capita (USD)" ? "GDP" :
+                  ind === "Time devoted to leisure and personal care" ? "Leisure" :
+                  "Rooms";
+      radarSvgHtml += `<text x="${labelX}" y="${labelY}" dy="0.35em" 
+        text-anchor="${Math.cos(ang) > 0 ? "start" : "end"}" font-size="8">${lab}</text>`;
+    });
+    radarSvgHtml += `<path d="${polyPath(recPts)}" fill="#e41a1c" fill-opacity="0.3" stroke="#e41a1c" stroke-width="1"/>`;
+    radarSvgHtml += `<path d="${polyPath(oecdPts)}" fill="#4daf4a" fill-opacity="0.3" stroke="#4daf4a" stroke-width="1"/>`;
+    radarSvgHtml += `</g></svg>`;
+
+    // Complete category table
+    let categoryHtml = `<div class="tooltip-categories"><table>`;
+    Object.entries(GROUPS).forEach(([groupName, cols]) => {
+      categoryHtml += `<tr><th colspan="2">${groupName}</th></tr>`;
+      cols.forEach(col => {
+        const val = rec[col];
+        categoryHtml += `<tr><td class="cat-label">${col}</td><td class="cat-value">${(isNaN(val) ? "—" : val.toFixed(1))}</td></tr>`;
+      });
+    });
+    categoryHtml += `</table></div>`;
 
     tooltip.html(`
       <div class="tooltip-header">
@@ -172,126 +366,51 @@ export async function drawMap(containerId, options) {
         <span class="pop">${(rec.population/1e6).toFixed(2)}M</span>
       </div>
       <div class="tooltip-metric">
-        Life satisfaction:
-        <span class="ls-value" style="color:${colorScale(rec.value)}">${rec.value}</span>
+        Life satisfaction: <span class="ls-value" style="color:${colorScale(rec["Life satisfaction"])}">${rec["Life satisfaction"].toFixed(1)}</span>
       </div>
-      <div class="tooltip-chart"></div>
-      <div class="tooltip-legend"></div>
-    `)
-    .classed('hidden', false);
-
-    const indicators = ['value','gdp','leisure','rooms'];
-    const angleStep = 2 * Math.PI / indicators.length;
-    const W = 150, H = 150, margin = 20;
-    const R = Math.min(W,H)/2 - margin;
-    const extents = new Map(
-      indicators.map(ind => [
-        ind,
-        [d3.min(data, d => d[ind]), d3.max(data, d => d[ind])]
-      ])
-    );
-
-    const radarData = [
-      { country: rec.country, points: [] },
-      { country: 'OECD', points: [] }
-    ];
-    indicators.forEach((ind,i) => {
-      const [lo,hi] = extents.get(ind);
-      const scaleNorm = (lo === hi)
-        ? d3.scaleLinear().domain([lo-1,hi+1]).range([0,1])
-        : d3.scaleLinear().domain([lo,hi]).range([0,1]);
-      radarData[0].points.push({ angle: i*angleStep, ratio: scaleNorm(rec[ind]) });
-      radarData[1].points.push({ angle: i*angleStep, ratio: scaleNorm(oecdAvg[ind]) });
-    });
-
-    const rc = tooltip.select('.tooltip-chart')
-      .append('svg')
-      .attr('width', W)
-      .attr('height', H)
-      .append('g')
-      .attr('transform', `translate(${W/2},${H/2})`);
-
-    for (let lvl = 1; lvl <= 4; lvl++) {
-      rc.append('circle')
-        .attr('r', R * lvl / 4)
-        .attr('fill', 'none')
-        .attr('stroke', '#ccc');
-    }
-
-    indicators.forEach((ind, i) => {
-      const ang = i * angleStep - Math.PI / 2;
-      const x = R * Math.cos(ang), y = R * Math.sin(ang);
-      rc.append('line')
-        .attr('x1', 0).attr('y1', 0)
-        .attr('x2', x).attr('y2', y)
-        .attr('stroke', '#999');
-      rc.append('text')
-        .attr('x', (R + 10) * Math.cos(ang))
-        .attr('y', (R + 10) * Math.sin(ang))
-        .attr('dy', '0.35em')
-        .attr('text-anchor', Math.cos(ang) > 0 ? 'start' : 'end')
-        .style('font-size', '9px')
-        .text(ind === 'value' ? 'Life' : ind.charAt(0).toUpperCase() + ind.slice(1));
-    });
-
-    const rScale = d3.scaleLinear().domain([0,1]).range([0,R]);
-    const lineGen = d3.lineRadial()
-      .angle(d => d.angle - Math.PI / 2)
-      .radius(d => rScale(d.ratio))
-      .curve(d3.curveLinearClosed);
-
-    const colorRadar = d3.scaleOrdinal()
-      .domain(radarData.map(d => d.country))
-      .range(['#e41a1c', '#4daf4a']);
-
-    radarData.forEach(series => {
-      rc.append('path')
-        .datum(series.points)
-        .attr('d', lineGen)
-        .attr('fill', colorRadar(series.country))
-        .attr('fill-opacity', 0.3)
-        .attr('stroke', colorRadar(series.country))
-        .attr('stroke-width', 1.5);
-    });
-
-    const legend = tooltip.select('.tooltip-legend').append('ul');
-    [
-      { color: '#e41a1c', label: rec.country },
-      { color: '#4daf4a', label: 'OECD avg' }
-    ].forEach(item => {
-      const li = legend.append('li');
-      li.append('span')
-        .attr('class', 'legend-color')
-        .style('background-color', item.color);
-      li.append('span')
-        .attr('class', 'legend-label')
-        .text(item.label);
-    });
+      <div class="tooltip-chart">${radarSvgHtml}</div>
+      ${categoryHtml}
+    `).classed("hidden", false);
   }
 
   function moveTooltip(event) {
     tooltip
-      .style('left', `${event.pageX + 10}px`)
-      .style('top',  `${event.pageY + 10}px`);
+      .style("left", `${event.pageX + 10}px`)
+      .style("top",  `${event.pageY + 10}px`);
   }
 
-  // Update widget with country vs OECD avg
-  function updateWidget(rec) {
-    widget.html('');
-    const header = widget.append('div').attr('class', 'widget-header');
-    header.append('span').attr('class', 'flag').text(rec.flag);
-    header.append('span').attr('class', 'country-name').text(rec.country);
-    header.append('span').attr('class', 'pop').text(`Pop: ${(rec.population/1e6).toFixed(2)}M`);
-    const list = widget.append('ul').attr('class', 'widget-metrics');
-    list.append('li')
-      .html(`Life satisfaction: <span class="ls-value" style="color:${colorScale(rec.value)}">${rec.value}</span>`);
-    ['gdp','leisure','rooms'].forEach(key => {
-      const label = key === 'gdp' ? 'GDP per capita' :
-                    key === 'leisure' ? 'Leisure hrs/day' : 'Rooms per person';
-      const val = rec[key];
-      const avg = oecdAvg[key];
-      list.append('li')
-        .text(`${label}: ${val} (Avg: ${avg.toFixed(1)})`);
+  // Update comparison widgets
+  function updateComparisonWidgets(home, sel) {
+    if (!home && sel) {
+      homeRec = sel;
+      localStorage.setItem("bli-selected-country", sel.country);
+      updateComparisonWidgets(homeRec, null);
+      return;
+    }
+    homeRec = home || homeRec;
+
+    // Home side
+    let homeHtml = `<div class="widget-header"><span class="flag">${homeRec.flag}</span> <span class="country-name">${homeRec.country}</span></div><table class="widget-table">`;
+    Object.entries(GROUPS).forEach(([groupName]) => {
+      const hVal = homeRec.groupAvg[groupName];
+      homeHtml += `<tr><td class="widget-label">${groupName}</td><td class="widget-value">${hVal.toFixed(1)}</td></tr>`;
     });
+    homeHtml += "</table>";
+    homeBox.innerHTML = homeHtml;
+
+    // Selected side
+    if (sel) {
+      let selHtml = `<div class="widget-header"><span class="flag">${sel.flag}</span> <span class="country-name">${sel.country}</span></div><table class="widget-table">`;
+      Object.entries(GROUPS).forEach(([groupName]) => {
+        const hVal = homeRec.groupAvg[groupName];
+        const sVal = sel.groupAvg[groupName];
+        const sColor = sVal > hVal ? "#4daf4a" : (sVal < hVal ? "#e41a1c" : "#555");
+        selHtml += `<tr><td class="widget-label">${groupName}</td><td class="widget-value" style="color:${sColor}">${sVal.toFixed(1)}</td></tr>`;
+      });
+      selHtml += "</table>";
+      selBox.innerHTML = selHtml;
+    } else {
+      selBox.innerHTML = "<em>Select a country<br>for comparison</em>";
+    }
   }
 }

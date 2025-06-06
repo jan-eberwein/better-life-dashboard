@@ -1,6 +1,5 @@
 import { drawScatter } from "./scatter.js";
 import { drawMap } from "./map.js";
-import { drawIndexWidget } from "./indexWidget.js";
 import { renderCountryGrid } from "./memberCountries.js";
 
 // Key for persisting the current slide index

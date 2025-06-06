@@ -1,6 +1,8 @@
+// src/map.js
 import * as d3 from "d3";
 
-// define groups and their underlying CSV columns
+
+// Category definitions
 const GROUPS = {
   "Housing": [
     "Dwellings without basic facilities",
@@ -51,203 +53,386 @@ const GROUPS = {
   ]
 };
 
-// assign each group a distinct color
-const groupColor = d3.scaleOrdinal()
-  .domain(Object.keys(GROUPS))
-  .range(d3.schemeSet3);
+// A small mapping from GeoJSON names → your CSV names
+const GEO_TO_CSV = {
+  "United Arab Emirates":    "United Arab Emirates",
+  "United Republic of Tanzania": "United Republic of Tanzania",
+  "USA":                     "United States",
+  "England":                 "United Kingdom"
+};
 
-export async function drawIndexWidget(containerId) {
-  const container = d3.select("#" + containerId);
-  container.selectAll("*").remove();
-  container
-    .style("font-family", "'Railway', sans-serif")
-    .style("padding", "12px")
-    .style("border", "1px solid #ddd")
-    .style("border-radius", "6px")
-    .style("background", "#fafafa");
+export async function drawMap(containerId, options) {
+  const opts = {
+    containerId,
+    csvUrl: options && options.csvUrl ? options.csvUrl : "/data/2024BetterLife.csv",
+    geojsonUrl: options && options.geojsonUrl ? options.geojsonUrl : "/data/world.geojson"
+  };
 
-  // load data
-  const raw = await d3.csv("/data/2024BetterLife.csv", d3.autoType);
+  // Container & dimensions
+  const container = document.getElementById(opts.containerId);
+  if (!container) throw new Error(`Container '#${opts.containerId}' not found`);
+  container.style.position = "relative";
+  container.innerHTML = ""; // Clear any previous content
 
-  // precompute group scores per country
-  const countries = raw.map(r => {
-    const scores = {};
-    Object.keys(GROUPS).forEach(grp => {
-      const vals = GROUPS[grp]
-        .map(c => +r[c])
-        .filter(v => !isNaN(v));
-      scores[grp] = vals.length ? d3.mean(vals) : 0;
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+
+  // Load CSV and GeoJSON
+  const [rawCsv, worldGeo] = await Promise.all([
+    d3.csv(opts.csvUrl),
+    d3.json(opts.geojsonUrl)
+  ]);
+
+  // Parse CSV into typed records and compute group averages
+  const data = rawCsv.map(row => {
+    const t = {};
+    Object.entries(row).forEach(([k, v]) => {
+      t[k.trim()] = v;
     });
-    return { Country: r.Country, scores, composite: 0 };
+    // Base record
+    const rec = {
+      country: t["Country"],
+      flag: t["Flag"],
+      // Raw values:
+      "Life satisfaction": +t["Life satisfaction"],
+      "GDP per capita (USD)": +t["GDP per capita (USD)"],
+      "Time devoted to leisure and personal care": +t["Time devoted to leisure and personal care"],
+      "Rooms per person": +t["Rooms per person"],
+      Population: +t["Population"],
+      "Dwellings without basic facilities": +t["Dwellings without basic facilities"],
+      "Housing expenditure": +t["Housing expenditure"],
+      "Labour market insecurity": +t["Labour market insecurity"],
+      "Employment rate": +t["Employment rate"],
+      "Long-term unemployment rate": +t["Long-term unemployment rate"],
+      "Quality of support network": +t["Quality of support network"],
+      "Educational attainment": +t["Educational attainment"],
+      "Student skills": +t["Student skills"],
+      "Years in education": +t["Years in education"],
+      "Air pollution": +t["Air pollution"],
+      "Water quality": +t["Water quality"],
+      "Stakeholder engagement for developing regulations": +t["Stakeholder engagement for developing regulations"],
+      "Voter turnout": +t["Voter turnout"],
+      "Life expectancy": +t["Life expectancy"],
+      "Self-reported health": +t["Self-reported health"],
+      "Feeling safe walking alone at night": +t["Feeling safe walking alone at night"],
+      "Homicide rate": +t["Homicide rate"],
+      "Employees working very long hours": +t["Employees working very long hours"]
+    };
+    // Compute group averages
+    rec.groupAvg = {};
+    Object.entries(GROUPS).forEach(([groupName, cols]) => {
+      const vals = cols
+        .map(c => rec[c])
+        .filter(v => v != null && !isNaN(v));
+      rec.groupAvg[groupName] = vals.length ? d3.mean(vals) : 0;
+    });
+    return rec;
   });
 
-  // controls: sliders for each group
-  const controls = container.append("div")
-    .style("display", "grid")
-    .style("grid-template-columns", "repeat(auto-fit, minmax(180px, 1fr))")
+  // Compute OECD averages by group
+  const oecdAvg = {};
+  Object.keys(GROUPS).forEach(groupName => {
+    const allVals = data
+      .map(d => d.groupAvg[groupName])
+      .filter(v => v != null);
+    oecdAvg[groupName] = allVals.length ? d3.mean(allVals) : 0;
+  });
+
+  // Controls (region dropdown)
+  const controls = d3.select(container)
+    .append("div")
+    .attr("id", "controls")
+    .style("position", "absolute")
+    .style("top", "8px")
+    .style("left", "10px")
+    .style("background", "rgba(255,255,255,0.8)")
+    .style("padding", "4px 8px")
+    .style("border-radius", "4px");
+  controls.append("label")
+    .attr("for", "region-select")
+    .text("Region:");
+  const select = controls.append("select")
+    .attr("id", "region-select")
+    .on("change", () => zoomTo(select.property("value")));
+  ["World", "Europe", "Africa", "Asia", "Americas", "Oceania"]
+    .forEach(r => select.append("option").attr("value", r).text(r));
+
+  // Comparison widget above the map
+  const widgetContainer = d3.select(container)
+    .append("div")
+    .attr("id", "widget-container")
+    .style("position", "absolute")
+    .style("top", "50px")
+    .style("left", "10px")
+    .style("width", "calc(100% - 20px)")
+    .style("display", "flex")
     .style("gap", "8px")
-    .style("margin-bottom", "12px");
+    .style("pointer-events", "none"); // so map clicks still work
 
-  // weight store
-  const weight = {};
-  Object.keys(GROUPS).forEach(grp => {
-    weight[grp] = 0;
-    const wrap = controls.append("div")
-      .style("font-size", "14px")
-      .style("color", groupColor(grp));
+  // Home country box (left)
+  const homeBox = widgetContainer.append("div")
+    .attr("id", "home-country-box")
+    .style("flex", "1")
+    .style("background", "rgba(0,0,0,0.7)")
+    .style("color", "#fff")
+    .style("padding", "8px")
+    .style("border-radius", "4px")
+    .style("font-family", "'Raleway', sans-serif");
 
-    wrap.append("label")
-      .text(grp)
-      .style("display", "block")
-      .style("font-weight", "bold");
+  // Selected country box (right)
+  const selBox = widgetContainer.append("div")
+    .attr("id", "selected-country-box")
+    .style("flex", "1")
+    .style("background", "rgba(255,255,255,0.9)")
+    .style("color", "#333")
+    .style("padding", "8px")
+    .style("border-radius", "4px")
+    .style("font-family", "'Raleway', sans-serif");
 
-    wrap.append("input")
-      .attr("type", "range")
-      .attr("min", 0).attr("max", 10).attr("step", 1)
-      .attr("value", 0)
-      .style("width", "100%")
-      .style("accent-color", groupColor(grp))
-      .on("input", function() {
-        weight[grp] = +this.value;
-        updateRanking();
-      })
-      .on("input.value", function() {
-        wrap.select(".slider-value").text(this.value);
-      });
+  // Initialize both boxes
+  homeBox.html("<em>Home country:<br>None</em>");
+  selBox.html("<em>Select a country<br>for details</em>");
 
-    wrap.append("span")
-      .attr("class", "slider-value")
-      .text("0")
-      .style("margin-left", "6px")
-      .style("font-weight", "bold");
-  });
+  // If a home country is stored, show it now
+  const storedName = localStorage.getItem("bli-selected-country");
+  let homeRec = null;
+  if (storedName) {
+    homeRec = data.find(d => d.country === storedName);
+    if (homeRec) {
+      updateComparisonWidgets(homeRec, null);
+    }
+  }
 
-  // chart container
-  const chartWrap = container.append("div")
-    .style("overflow-y", "auto")
-    .style("max-height", "480px");
+  // SVG canvas
+  const svg = d3.select(container)
+    .append("svg")
+    .attr("id", "map-svg")
+    .attr("width", width)
+    .attr("height", height);
 
-  const svg = chartWrap.append("svg").attr("width", "100%");
+  const projection = d3.geoNaturalEarth1()
+    .scale(width / (1.3 * Math.PI))
+    .translate([width / 2, height / 2]);
+  const path = d3.geoPath(projection);
 
-  // tooltip with mini radar
-  const tooltip = d3.select("body").append("div")
-    .attr("class", "ranking-tooltip")
+  // Tooltip for hover
+  const tooltip = d3.select(container)
+    .append("div")
+    .attr("id", "tooltip")
+    .classed("hidden", true)
     .style("position", "absolute")
     .style("pointer-events", "none")
-    .style("background", "#fff")
-    .style("border", "1px solid #aaa")
-    .style("border-radius", "4px")
+    .style("background", "rgba(255,255,255,0.95)")
     .style("padding", "8px")
-    .style("opacity", 0);
+    .style("border", "1px solid #999")
+    .style("border-radius", "4px")
+    .style("font-family", "'Raleway', sans-serif")
+    .style("font-size", "12px")
+    .style("z-index", "10");
+  d3.select(container).on("mouseleave", () => tooltip.classed("hidden", true));
 
-  function updateRanking() {
-    // use Life Satisfaction if all weights zero
-    const totalW = d3.sum(Object.values(weight));
-    const useWeights = totalW > 0 ? weight : { "Life Satisfaction": 1 };
-    const sumW = d3.sum(Object.values(useWeights));
+  // Color scale by life satisfaction
+  const colorScale = d3.scaleSequential(d3.interpolateRdYlGn)
+    .domain([d3.min(data, d => d["Life satisfaction"]), d3.max(data, d => d["Life satisfaction"])]);
 
-    countries.forEach(c => {
-      let s = 0;
-      Object.entries(useWeights).forEach(([grp, w]) => {
-        s += (c.scores[grp] || 0) * w;
+  // Draw all countries
+  const g = svg.append("g");
+  g.selectAll("path.country")
+    .data(worldGeo.features)
+    .enter().append("path")
+      .attr("class", "country")
+      .attr("d", path)
+      .attr("fill", feat => {
+        const name = feat.properties.name;
+        const csvName = GEO_TO_CSV[name] || name;
+        const rec = data.find(d => d.country === csvName);
+        return rec ? colorScale(rec["Life satisfaction"]) : "#eee";
+      })
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 0.5)
+      .on("mouseover", (_, feat) => showTooltip(feat))
+      .on("mousemove", moveTooltip)
+      .on("mouseout", () => tooltip.classed("hidden", true))
+      .on("click", (_, feat) => {
+        const name = feat.properties.name;
+        const csvName = GEO_TO_CSV[name] || name;
+        const rec = data.find(d => d.country === csvName);
+        if (rec) {
+          // Update selected widget
+          updateComparisonWidgets(homeRec, rec);
+          // If no home yet, set this as home
+          if (!homeRec) {
+            homeRec = rec;
+            localStorage.setItem("bli-selected-country", rec.country);
+            updateComparisonWidgets(homeRec, null);
+          }
+        }
       });
-      c.composite = sumW ? s / sumW : 0;
-    });
-    countries.sort((a, b) => b.composite - a.composite);
 
-    // draw bars
-    const margin = { top: 20, right: 20, bottom: 20, left: 150 };
-    const cw = chartWrap.node().clientWidth;
-    const width = cw - margin.left - margin.right;
-    const height = countries.length * 20;
+  // Zoom behavior
+  const zoom = d3.zoom()
+    .scaleExtent([1, 8])
+    .on("zoom", e => g.attr("transform", e.transform));
+  svg.call(zoom);
 
-    svg.attr("height", height + margin.top + margin.bottom).selectAll("*").remove();
+  // Set the dropdown to World and zoom out
+  select.property("value", "World");
+  zoomTo("World");
 
-    const x = d3.scaleLinear()
-      .domain([0, d3.max(countries, d => d.composite)])
-      .range([0, width]);
-
-    const y = d3.scaleBand()
-      .domain(countries.map(d => d.Country))
-      .range([margin.top, margin.top + height])
-      .padding(0.1);
-
-    // x-axis
-    svg.append("g")
-      .attr("transform", `translate(${margin.left},${margin.top + height})`)
-      .call(d3.axisBottom(x).ticks(5));
-
-    // bars
-    svg.append("g")
-      .attr("transform", `translate(${margin.left},0)`)
-      .selectAll("rect")
-      .data(countries)
-      .join("rect")
-        .attr("y", d => y(d.Country))
-        .attr("width", d => x(d.composite))
-        .attr("height", y.bandwidth())
-        .attr("fill", "#69b3a2")
-        .on("mouseover", (e, d) => {
-          drawRadarTooltip(d);
-          tooltip.transition().duration(150).style("opacity", 1);
-        })
-        .on("mousemove", e => {
-          tooltip
-            .style("left", (e.pageX + 12) + "px")
-            .style("top",  (e.pageY + 12) + "px");
-        })
-        .on("mouseout", () => tooltip.transition().duration(150).style("opacity", 0));
-
-    // labels
-    svg.append("g")
-      .attr("transform", `translate(${margin.left - 6},0)`)
-      .selectAll("text")
-      .data(countries)
-      .join("text")
-        .attr("x", 0)
-        .attr("y", d => y(d.Country) + y.bandwidth() / 2)
-        .attr("dy", "0.35em")
-        .attr("text-anchor", "end")
-        .style("font-size", "12px")
-        .text(d => d.Country);
+  // ───────────────────────────────────────────────────────────────────────────────
+  function zoomTo(region) {
+    const boxes = {
+      World:   [[-180,-90],[180,90]],
+      Europe:  [[-25,34],[40,71]],
+      Africa:  [[-20,-35],[55,38]],
+      Asia:    [[25,-10],[180,80]],
+      Americas:[[-170,-60],[-30,85]],
+      Oceania: [[110,-50],[180,10]]
+    };
+    const [[x0,y0],[x1,y1]] = boxes[region];
+    const p0 = projection([x0, y1]);
+    const p1 = projection([x1, y0]);
+    const dx = p1[0] - p0[0],
+          dy = p1[1] - p0[1];
+    const xC = (p0[0] + p1[0]) / 2,
+          yC = (p0[1] + p1[1]) / 2;
+    const scale = Math.min(width / dx, height / dy) * 0.8;
+    const translate = [ width / 2 - scale * xC, height / 2 - scale * yC ];
+    svg.transition().duration(750)
+      .call(zoom.transform,
+        d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+      );
   }
 
-  function drawRadarTooltip(c) {
-    tooltip.html("");
-    const size = 120;
-    const r = size / 2 - 10;
-    const svgT = tooltip.append("svg")
-      .attr("width", size)
-      .attr("height", size)
-      .style("font-family", "'Railway', sans-serif");
+  function showTooltip(feat) {
+    const name    = feat.properties.name;
+    const csvName = GEO_TO_CSV[name] || name;
+    const rec = data.find(d => d.country === csvName);
+    if (!rec) return;
 
-    const groups = Object.keys(GROUPS);
-    const values = groups.map(g => c.scores[g]);
-    const angleStep = Math.PI * 2 / groups.length;
-    const radial = d3.scaleLinear()
-      .domain([0, d3.max(values)])
-      .range([0, r]);
+    // Build a small radar chart (Life, GDP, Leisure, Rooms)
+    const indicators = ["Life satisfaction", "GDP per capita (USD)", "Time devoted to leisure and personal care", "Rooms per person"];
+    const angleStep = 2 * Math.PI / indicators.length;
+    const W = 120, H = 120, margin = 10;
+    const R = Math.min(W, H)/2 - margin;
 
-    // grid lines
-    for (let i = 0; i < groups.length; i++) {
-      const angle = i * angleStep - Math.PI / 2;
-      svgT.append("line")
-        .attr("x1", size / 2)
-        .attr("y1", size / 2)
-        .attr("x2", size / 2 + Math.cos(angle) * r)
-        .attr("y2", size / 2 + Math.sin(angle) * r)
-        .attr("stroke", "#ccc");
+    const extentsMap = new Map(
+      indicators.map(ind => [
+        ind,
+        [d3.min(data, d => d[ind]), d3.max(data, d => d[ind])]
+      ])
+    );
+
+    function computePoints(record) {
+      return indicators.map((ind, i) => {
+        const [lo, hi] = extentsMap.get(ind);
+        const norm = (lo === hi)
+          ? d3.scaleLinear().domain([lo-1, hi+1]).range([0, 1])
+          : d3.scaleLinear().domain([lo, hi]).range([0, 1]);
+        return {
+          angle: i * angleStep,
+          ratio: norm(record[ind])
+        };
+      });
     }
 
-    // polygon
-    const line = d3.lineRadial()
-      .radius(d => radial(d))
-      .angle((_, i) => i * angleStep);
-    svgT.append("path")
-      .datum(values);
-    // (Original code ends here; continue logic if needed)
+    const recPts  = computePoints(rec);
+    const oecdPts = computePoints(oecdAvg);
+
+    function polyPath(points) {
+      let d = "";
+      points.forEach((p, i) => {
+        const ang = p.angle - Math.PI/2;
+        const r   = R * p.ratio;
+        const x   = r * Math.cos(ang);
+        const y   = r * Math.sin(ang);
+        d += (i === 0 ? "M" : "L") + x + "," + y;
+      });
+      return d + "Z";
+    }
+
+    let radarSvgHtml = `<svg width="${W}" height="${H}"><g transform="translate(${W/2},${H/2})">`;
+    // concentric circles
+    for (let lvl = 1; lvl <= 4; lvl++) {
+      radarSvgHtml += `<circle r="${(R * lvl / 4)}" fill="none" stroke="#ccc"/>`;
+    }
+    // axes and labels
+    indicators.forEach((ind, i) => {
+      const ang = i * angleStep - Math.PI/2;
+      const xA = R * Math.cos(ang), yA = R * Math.sin(ang);
+      radarSvgHtml += `<line x1="0" y1="0" x2="${xA}" y2="${yA}" stroke="#999"/>`;
+      const labelX = (R + 12) * Math.cos(ang), labelY = (R + 12) * Math.sin(ang);
+      const lab = ind === "Life satisfaction" ? "Life" :
+                  ind === "GDP per capita (USD)" ? "GDP" :
+                  ind === "Time devoted to leisure and personal care" ? "Leisure" :
+                  "Rooms";
+      radarSvgHtml += `<text x="${labelX}" y="${labelY}" dy="0.35em" 
+        text-anchor="${Math.cos(ang) > 0 ? "start" : "end"}" font-size="8">${lab}</text>`;
+    });
+    // polygons
+    radarSvgHtml += `<path d="${polyPath(recPts)}" fill="#e41a1c" fill-opacity="0.3" stroke="#e41a1c" stroke-width="1"/>`;
+    radarSvgHtml += `<path d="${polyPath(oecdPts)}" fill="#4daf4a" fill-opacity="0.3" stroke="#4daf4a" stroke-width="1"/>`;
+    radarSvgHtml += `</g></svg>`;
+
+    // Build tooltip HTML
+    tooltip.html(`
+      <div class="tooltip-header">
+        <span class="flag">${rec.flag}</span>
+        <span class="name">${rec.country}</span>
+        <span class="pop">${(rec.population/1e6).toFixed(2)}M</span>
+      </div>
+      <div class="tooltip-metric">
+        Life satisfaction: <span class="ls-value" style="color:${colorScale(rec["Life satisfaction"])}">${rec["Life satisfaction"].toFixed(1)}</span>
+      </div>
+      <div class="tooltip-chart">${radarSvgHtml}</div>
+      <div class="tooltip-legend">
+        <span class="legend-item"><span class="legend-color" style="background:#e41a1c;"></span><span class="legend-label">${rec.country}</span></span>
+        <span class="legend-item"><span class="legend-color" style="background:#4daf4a;"></span><span class="legend-label">OECD</span></span>
+      </div>
+    `).classed("hidden", false);
   }
 
-  // init
-  updateRanking();
+  function moveTooltip(event) {
+    tooltip
+      .style("left", `${event.pageX + 10}px`)
+      .style("top",  `${event.pageY + 10}px`);
+  }
+
+  // Update both home and selected boxes with all categories
+  function updateComparisonWidgets(home, sel) {
+    if (!home && sel) {
+      homeRec = sel;
+      localStorage.setItem("bli-selected-country", sel.country);
+      updateComparisonWidgets(homeRec, null);
+      return;
+    }
+    homeRec = home || homeRec;
+
+    const categories = Object.keys(GROUPS);
+    // Build HTML for home
+    let homeHtml = `<div class="widget-header"><span class="flag">${homeRec.flag}</span> <span class="country-name">${homeRec.country}</span></div><ul class="widget-metrics">`;
+    categories.forEach(cat => {
+      const hVal = homeRec.groupAvg[cat];
+      homeHtml += `<li class="metric-item"><span class="metric-label">${cat}:</span> <span class="metric-value home-${cat.replace(/\s+/g, "-")}">${hVal.toFixed(1)}</span></li>`;
+    });
+    homeHtml += `</ul>`;
+    homeBox.html(homeHtml);
+
+    // If sel exists, build its HTML side and color-code differences
+    if (sel) {
+      let selHtml = `<div class="widget-header"><span class="flag">${sel.flag}</span> <span class="country-name">${sel.country}</span></div><ul class="widget-metrics">`;
+      categories.forEach(cat => {
+        const hVal = homeRec.groupAvg[cat];
+        const sVal = sel.groupAvg[cat];
+        // Determine colors
+        const hColor = hVal > sVal ? "#4daf4a" : (hVal < sVal ? "#e41a1c" : "#555");
+        const sColor = sVal > hVal ? "#4daf4a" : (sVal < hVal ? "#e41a1c" : "#555");
+        selHtml += `<li class="metric-item"><span class="metric-label">${cat}:</span> <span class="metric-value sel-${cat.replace(/\s+/g, "-")}" style="color:${sColor};">${sVal.toFixed(1)}</span></li>`;
+      });
+      selHtml += `</ul>`;
+      selBox.html(selHtml);
+    } else {
+      selBox.html(`<em>Select a country<br>for comparison</em>`);
+    }
+  }
 }

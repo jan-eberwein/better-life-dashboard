@@ -1,49 +1,48 @@
-// src/memberCountries.ts
 import * as d3 from "d3";
 
 // CSV file URL
 const CSV_URL = "/data/2024BetterLife.csv";
 
 // Mapping of categories to CSV column names (trimmed – no leading spaces)
-export const GROUPS: Record<string, string[]> = {
+export const GROUPS = {
   Housing: [
     "Dwellings without basic facilities",
     "Housing expenditure",
-    "Rooms per person",
+    "Rooms per person"
   ],
   Income: [
     "GDP per capita (USD)",
     "Household net adjusted disposable income",
     "Household net wealth",
-    "Personal earnings",
+    "Personal earnings"
   ],
   Jobs: [
     "Labour market insecurity",
     "Employment rate",
-    "Long-term unemployment rate",
+    "Long-term unemployment rate"
   ],
   Community: ["Quality of support network"],
   Education: ["Educational attainment", "Student skills", "Years in education"],
   Environment: ["Air pollution", "Water quality"],
   "Civic Engagement": [
     "Stakeholder engagement for developing regulations",
-    "Voter turnout",
+    "Voter turnout"
   ],
   Health: ["Life expectancy", "Self-reported health"],
   "Life Satisfaction": ["Life satisfaction"],
   Safety: ["Feeling safe walking alone at night", "Homicide rate"],
   "Work-Life Balance": [
     "Employees working very long hours",
-    "Time devoted to leisure and personal care",
-  ],
+    "Time devoted to leisure and personal care"
+  ]
 };
 
-export async function renderCountryGrid(selector: string) {
+export async function renderCountryGrid(selector) {
   // 1) load and auto-type the CSV
   const raw = await d3.csv(CSV_URL, d3.autoType);
 
   // 2) trim all header names on each row (remove those pesky leading spaces)
-  raw.forEach((row: any) => {
+  raw.forEach(row => {
     Object.keys(row).forEach(key => {
       const trimmed = key.trim();
       if (trimmed !== key) {
@@ -54,9 +53,10 @@ export async function renderCountryGrid(selector: string) {
   });
 
   // 3) compute per-category averages into a new _groupAvg field
-  raw.forEach((row: any) => {
-    row._groupAvg = {} as Record<string, number | null>;
-    for (const [cat, cols] of Object.entries(GROUPS)) {
+  raw.forEach(row => {
+    row._groupAvg = {};
+    for (const cat of Object.keys(GROUPS)) {
+      const cols = GROUPS[cat];
       const vals = cols
         .map(c => row[c])
         .filter(v => v != null && !isNaN(v));
@@ -65,12 +65,12 @@ export async function renderCountryGrid(selector: string) {
   });
 
   // 4) build a 1–10 scale for each category (clamped)
-  const scales: Record<string, d3.ScaleLinear<number, number>> = {};
+  const scales = {};
   for (const cat of Object.keys(GROUPS)) {
     const all = raw
-      .map((d: any) => d._groupAvg[cat])
-      .filter((v): v is number => v != null);
-    const [min, max] = d3.extent(all) as [number, number];
+      .map(d => d._groupAvg[cat])
+      .filter(v => v != null);
+    const [min, max] = d3.extent(all);
     scales[cat] = d3
       .scaleLinear()
       .domain([min, max])
@@ -103,7 +103,7 @@ export async function renderCountryGrid(selector: string) {
     .style("padding", "16px");
 
   const boxes = container
-    .selectAll<HTMLDivElement, any>(".country-box")
+    .selectAll(".country-box")
     .data(raw)
     .enter()
     .append("div")
@@ -120,7 +120,7 @@ export async function renderCountryGrid(selector: string) {
   boxes
     .append("div")
     .attr("class", "country-flag")
-    .text((d: any) => d.Flag)
+    .text(d => d.Flag)
     .style("font-size", "32px")
     .style("line-height", "1");
 
@@ -128,14 +128,14 @@ export async function renderCountryGrid(selector: string) {
   boxes
     .append("div")
     .attr("class", "country-name")
-    .text((d: any) => d.Country)
+    .text(d => d.Country)
     .style("margin-top", "4px")
     .style("font-size", "14px")
     .style("font-weight", "bold");
 
   // hover behavior
   boxes
-    .on("mouseover", (event, d: any) => {
+    .on("mouseover", (event, d) => {
       tooltip.html("");
 
       // --- header: flag + name, population + raw life satisfaction ---
@@ -151,9 +151,7 @@ export async function renderCountryGrid(selector: string) {
       const lsRaw = d["Life satisfaction"];
       header
         .append("div")
-        .text(
-          `Life satisfaction: ${lsRaw != null ? lsRaw.toFixed(1) : "—"}`
-        );
+        .text(`Life satisfaction: ${lsRaw != null ? lsRaw.toFixed(1) : "—"}`);
 
       // separator
       tooltip
@@ -175,7 +173,7 @@ export async function renderCountryGrid(selector: string) {
 
       tooltip.transition().duration(100).style("opacity", 1);
     })
-    .on("mousemove", (event) => {
+    .on("mousemove", event => {
       tooltip
         .style("left", `${event.pageX + 12}px`)
         .style("top", `${event.pageY + 12}px`);

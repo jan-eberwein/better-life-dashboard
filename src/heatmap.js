@@ -1,4 +1,3 @@
-// src/heatmap.ts
 import * as d3 from "d3";
 
 const HIGHLIGHTS = [
@@ -14,13 +13,13 @@ const HIGHLIGHTS = [
   { a: "Educational attainment",    b: "Employees working very long hours" }
 ];
 
-export async function drawHeatmap(containerId: string) {
+export async function drawHeatmap(containerId) {
   // prepare container
-  const container = d3.select<HTMLElement, unknown>(`#${containerId}`);
+  const container = d3.select(`#${containerId}`);
   container.selectAll("*").remove();
 
   // dimensions
-  const width  = container.node()!.clientWidth  || 700;
+  const width  = container.node().clientWidth  || 700;
   const height = 650;
   const margin = { top: 40, right: 20, bottom: 100, left: 120 };
   const innerW = width  - margin.left - margin.right;
@@ -33,31 +32,35 @@ export async function drawHeatmap(containerId: string) {
   // numeric columns
   const cols = raw.columns.filter(
     (c) => typeof raw[0][c] === "number" && c !== "Population"
-  ) as string[];
+  );
 
   // build matrix
-  const matrix: { x: number; y: number; value: number }[] = [];
+  const matrix = [];
   cols.forEach((c1, i) =>
     cols.forEach((c2, j) =>
-      matrix.push({ x: j, y: i, value: computeCorrelation(
-        raw.map(r => r[c1] as number),
-        raw.map(r => r[c2] as number)
-      )})
+      matrix.push({
+        x: j,
+        y: i,
+        value: computeCorrelation(
+          raw.map(r => r[c1]),
+          raw.map(r => r[c2])
+        )
+      })
     )
   );
 
   // scales
-  const xScale = d3.scaleBand<number>()
+  const xScale = d3.scaleBand()
     .domain(d3.range(cols.length))
     .range([0, innerW])
     .padding(0.02);
 
-  const yScale = d3.scaleBand<number>()
+  const yScale = d3.scaleBand()
     .domain(d3.range(cols.length))
     .range([0, innerH])
     .padding(0.02);
 
-  const colorScale = d3.scaleDiverging<number>()
+  const colorScale = d3.scaleDiverging()
     .domain([-1, 0, 1])
     .interpolator(d3.interpolateRdBu);
 
@@ -76,8 +79,8 @@ export async function drawHeatmap(containerId: string) {
     .data(matrix)
     .enter()
     .append("rect")
-      .attr("x", d => xScale(d.x)!)
-      .attr("y", d => yScale(d.y)!)
+      .attr("x", d => xScale(d.x))
+      .attr("y", d => yScale(d.y))
       .attr("width",  xScale.bandwidth())
       .attr("height", yScale.bandwidth())
       .attr("fill",   d => colorScale(d.value))
@@ -90,8 +93,8 @@ export async function drawHeatmap(containerId: string) {
     const j = cols.indexOf(a);
     if (i >= 0 && j >= 0) {
       svg.append("rect")
-        .attr("x", xScale(i)!)
-        .attr("y", yScale(j)!)
+        .attr("x", xScale(i))
+        .attr("y", yScale(j))
         .attr("width",  xScale.bandwidth())
         .attr("height", yScale.bandwidth())
         .attr("fill",   "none")
@@ -106,11 +109,11 @@ export async function drawHeatmap(containerId: string) {
     .data(cols)
     .enter()
     .append("text")
-      .attr("x", (_, i) => xScale(i)! + xScale.bandwidth()/2)
+      .attr("x", (_, i) => xScale(i) + xScale.bandwidth() / 2)
       .attr("y", innerH + 12)
       .attr("text-anchor", "start")
       .attr("transform", (_, i) =>
-        `translate(0,0) rotate(45, ${xScale(i)! + xScale.bandwidth()/2}, ${innerH + 12})`
+        `translate(0,0) rotate(45, ${xScale(i) + xScale.bandwidth() / 2}, ${innerH + 12})`
       )
       .style("font-weight", "bold")
       .style("font-size", "12px")
@@ -122,7 +125,7 @@ export async function drawHeatmap(containerId: string) {
     .enter()
     .append("text")
       .attr("x", -10)
-      .attr("y", (_, i) => yScale(i)! + yScale.bandwidth()/2)
+      .attr("y", (_, i) => yScale(i) + yScale.bandwidth() / 2)
       .attr("text-anchor", "end")
       .attr("dy", "0.35em")
       .style("font-weight", "bold")
@@ -158,12 +161,12 @@ export async function drawHeatmap(containerId: string) {
 }
 
 /** Pearson correlation */
-function computeCorrelation(a: number[], b: number[]): number {
+function computeCorrelation(a, b) {
   const n = a.length;
-  const meanA = d3.mean(a)!;
-  const meanB = d3.mean(b)!;
-  const cov = d3.sum(a.map((v,i) => (v-meanA)*(b[i]-meanB))) / (n-1);
-  const sdA = Math.sqrt(d3.sum(a.map(v => (v-meanA)**2)) / (n-1));
-  const sdB = Math.sqrt(d3.sum(b.map(v => (v-meanB)**2)) / (n-1));
+  const meanA = d3.mean(a);
+  const meanB = d3.mean(b);
+  const cov = d3.sum(a.map((v, i) => (v - meanA) * (b[i] - meanB))) / (n - 1);
+  const sdA = Math.sqrt(d3.sum(a.map(v => (v - meanA) ** 2)) / (n - 1));
+  const sdB = Math.sqrt(d3.sum(b.map(v => (v - meanB) ** 2)) / (n - 1));
   return cov / (sdA * sdB);
 }

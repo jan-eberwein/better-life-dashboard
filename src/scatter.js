@@ -1,7 +1,6 @@
-// @ts-nocheck
 import * as d3 from "d3";
 
-export async function drawScatter(containerId: string) {
+export async function drawScatter(containerId) {
   const container = d3.select(`#${containerId}`);
   container.selectAll("*").remove();
 
@@ -21,13 +20,13 @@ export async function drawScatter(containerId: string) {
   const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
   // load & parse
-  const raw: any[] = await d3.csv("/data/2024BetterLife.csv", d3.autoType);
+  const raw = await d3.csv("/data/2024BetterLife.csv", d3.autoType);
   if (!raw.length) return;
 
   // detect keys
   const headers = Object.keys(raw[0]);
-  const xKey = headers.find(k => /disposable income/i.test(k))!;
-  const yKey = headers.find(k => /very long hours/i.test(k))!;
+  const xKey = headers.find(k => /disposable income/i.test(k));
+  const yKey = headers.find(k => /very long hours/i.test(k));
   const popKey = headers.find(k => /population/i.test(k));
 
   const data = raw.filter(d => isFinite(d[xKey]) && isFinite(d[yKey]));
@@ -35,31 +34,33 @@ export async function drawScatter(containerId: string) {
   // scales
   const x = d3
     .scaleLinear()
-    .domain(d3.extent(data, d => d[xKey]) as [number, number])
+    .domain(d3.extent(data, d => d[xKey]))
     .nice()
     .range([0, w]);
   const y = d3
     .scaleLinear()
-    .domain(d3.extent(data, d => d[yKey]) as [number, number])
+    .domain(d3.extent(data, d => d[yKey]))
     .nice()
     .range([h, 0]);
   const rScale = popKey
-    ? d3.scaleSqrt().domain(d3.extent(data, d => d[popKey]) as [number, number]).range([3, 18])
+    ? d3.scaleSqrt().domain(d3.extent(data, d => d[popKey])).range([3, 18])
     : () => 6;
 
   // continent palette
-  const palette: Record<string, string> = {
+  const palette = {
     Europe: "#1f77b4",
     Americas: "#ff7f0e",
     Asia: "#2ca02c",
-    Oceania: "#d62728",
+    Oceania: "#d62728"
   };
-  function regionOf(country: string): string {
-    const eu = ["Austria","Belgium","Czechia","Denmark","Estonia","Finland",
+  function regionOf(country) {
+    const eu = [
+      "Austria","Belgium","Czechia","Denmark","Estonia","Finland",
       "France","Germany","Greece","Hungary","Iceland","Ireland","Italy","Latvia",
       "Lithuania","Luxembourg","Netherlands","Norway","Poland","Portugal",
       "Slovak Republic","Slovenia","Spain","Sweden","Switzerland","Türkiye",
-      "United Kingdom"];
+      "United Kingdom"
+    ];
     const am = ["Canada","Chile","Colombia","Costa Rica","Mexico","United States"];
     const as = ["Israel","Japan","Korea"];
     const oc = ["Australia","New Zealand"];
@@ -115,7 +116,7 @@ export async function drawScatter(containerId: string) {
     .attr("r", d => (popKey ? rScale(d[popKey]) : rScale()))
     .attr("fill", d => palette[regionOf(d.Country)])
     .attr("opacity", 0.8)
-    .on("mouseover", (e: any, d: any) => {
+    .on("mouseover", (e, d) => {
       d3.select(".scatter-tip")
         .style("opacity", 1)
         .html(

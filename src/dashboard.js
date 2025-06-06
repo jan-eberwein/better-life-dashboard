@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as d3 from 'd3';
 
 // 1. Configuration & globals
@@ -59,7 +58,7 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
     const countries = Array.from(new Set(raw.map(d => d.Country))).sort();
 
     // --- Common Country Selector ---
-    const countrySelect = document.getElementById('country-select') as HTMLSelectElement;
+    const countrySelect = document.getElementById('country-select');
     if (countrySelect) {
         // populate options
         countrySelect.innerHTML = countries.map(c => `<option value="${c}">${c}</option>`).join('');
@@ -99,9 +98,9 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
     }
 
     // --- Scatter Plot Controls ---
-    const xAxisSelect = document.getElementById('x-axis-select') as HTMLSelectElement;
-    const yAxisSelect = document.getElementById('y-axis-select') as HTMLSelectElement;
-    const scalePopCheckbox = document.getElementById('scale-population-checkbox') as HTMLInputElement;
+    const xAxisSelect = document.getElementById('x-axis-select');
+    const yAxisSelect = document.getElementById('y-axis-select');
+    const scalePopCheckbox = document.getElementById('scale-population-checkbox');
 
     numericKeys = Object.keys(raw[0]).filter(k => k !== 'Country' && k !== 'Flag' && k !== 'Population' && typeof raw[0][k] === 'number');
 
@@ -122,9 +121,9 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
     }
 
     // --- Bar Chart Controls ---
-    const propertySelect = document.getElementById('property-select') as HTMLSelectElement;
-    const numSelect = document.getElementById('num-select') as HTMLSelectElement;
-    const continentCheckbox = document.getElementById('continent-mode') as HTMLInputElement;
+    const propertySelect = document.getElementById('property-select');
+    const numSelect = document.getElementById('num-select');
+    const continentCheckbox = document.getElementById('continent-mode');
 
     if (propertySelect) {
         numericKeys.forEach(k => propertySelect.add(new Option(k, k)));
@@ -170,9 +169,7 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
     };
 });
 
-
 // 3. Scatter Plot Functions
-// type Selector = string; // Removed for V1 style simplicity with @ts-nocheck
 function setupScatterPlotSVG(selector) {
     const container = d3.select(selector);
     if (container.empty()) { console.error(`Scatter plot container ${selector} not found.`); return; }
@@ -254,8 +251,8 @@ function renderRadarChart(selector, data, extents, selectedCountry) {
         gRadar.append('line').attr('x1',0).attr('y1',0)
             .attr('x2',x_ax).attr('y2',y_ax).attr('stroke','#999');
         gRadar.append('text')
-            .attr('x',(R+25)*Math.cos(a)) // Adjusted from new for consistency
-            .attr('y',(R+25)*Math.sin(a)) // Adjusted from new
+            .attr('x',(R+25)*Math.cos(a))
+            .attr('y',(R+25)*Math.sin(a))
             .attr('dy', ((a > Math.PI / 2 && a < 3 * Math.PI / 2) || (a < -Math.PI / 2 && a > -3 * Math.PI / 2)) ? '1em' : '0.35em')
             .attr('text-anchor', Math.abs(Math.cos(a)) < 0.01 ? 'middle' : (Math.cos(a) > 0 ? 'start' : 'end'))
             .style('font-size', '11px')
@@ -348,9 +345,9 @@ function setupBarChartSVG(selector) {
 function renderBarChart() {
     if (!barG || !betterlifeindexDataWide.length) return;
 
-    const continentCheckbox = document.getElementById('continent-mode') as HTMLInputElement;
-    const numSelect = document.getElementById('num-select') as HTMLSelectElement;
-    const propertySelect = document.getElementById('property-select') as HTMLSelectElement;
+    const continentCheckbox = document.getElementById('continent-mode');
+    const numSelect = document.getElementById('num-select');
+    const propertySelect = document.getElementById('property-select');
 
     const continentMode = continentCheckbox ? continentCheckbox.checked : false;
     const numVal = numSelect ? numSelect.value : 'Top 10';

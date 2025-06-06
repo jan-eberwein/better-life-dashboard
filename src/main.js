@@ -1,19 +1,13 @@
-// src/main.ts
-import { drawScatter }       from "./scatter";
-import { drawMap }           from "./map";
-import { drawIndexWidget }   from "./indexWidget";
+import { drawScatter } from "./scatter";
+import { drawMap } from "./map";
+import { drawIndexWidget } from "./indexWidget";
 import { renderCountryGrid } from "./memberCountries";
-
-interface Slide {
-  headline: string;
-  description: string;
-}
 
 // Key for persisting the current slide index
 const STORAGE_KEY = "bli-current-slide";
 
 // Slides for the introduction carousel
-const slides: Slide[] = [
+const slides = [
   {
     headline: "How’s life?",
     description: `What makes for a good life? Many people might say “money” or “career success,” but quality of life goes far beyond income. The OECD Better Life Index 2024 compares countries not just economically, but across 11 key dimensions that truly shape our daily lives — like health, education, environment, work-life balance, and social connection.<br><br>This project invites you to explore these factors interactively. Through data and storytelling, we’ll uncover where people are most satisfied with life in 2024 — and why.`
@@ -53,35 +47,35 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function initCarousel() {
-  const container = document.querySelector<HTMLDivElement>(".slide-container")!;
-  const template  = container.querySelector<HTMLDivElement>(".slide")!;
+  const container = document.querySelector(".slide-container");
+  const template = container.querySelector(".slide");
   template.remove();
 
   // Clone & populate slides
   const elems = slides.map((slide, i) => {
-    const el = template.cloneNode(true) as HTMLDivElement;
-    el.querySelector<HTMLHeadingElement>(".headline")!.innerHTML = slide.headline;
-    el.querySelector<HTMLDivElement>(".description")!.innerHTML = slide.description;
+    const el = template.cloneNode(true);
+    el.querySelector(".headline").innerHTML = slide.headline;
+    el.querySelector(".description").innerHTML = slide.description;
 
     // Slide 1: logo & index widget
     if (i === 0) {
       const logo = document.createElement("img");
-      logo.src       = "/logo-bli.png";
-      logo.alt       = "Better Life Index logo";
+      logo.src = "/logo-bli.png";
+      logo.alt = "Better Life Index logo";
       logo.className = "logo";
 
       const subtitle = document.createElement("h2");
       subtitle.textContent = "2024 Visualized";
-      subtitle.className   = "subtitle";
+      subtitle.className = "subtitle";
 
       el.prepend(subtitle);
       el.prepend(logo);
 
       const widgetDiv = document.createElement("div");
-      widgetDiv.id    = "index-widget";
+      widgetDiv.id = "index-widget";
       widgetDiv.style.margin = "20px 0";
 
-      el.querySelector(".description")!
+      el.querySelector(".description")
         .insertAdjacentElement("afterend", widgetDiv);
     }
 
@@ -91,30 +85,30 @@ function initCarousel() {
       gridDiv.id = "member-countries-grid";
       gridDiv.style.margin = "20px 0";
 
-      el.querySelector(".description")!
+      el.querySelector(".description")
         .insertAdjacentElement("afterend", gridDiv);
     }
 
     // Slide 3: Scatter
     if (slide.headline.startsWith("Money or time")) {
       const scatterDiv = document.createElement("div");
-      scatterDiv.id          = "scatter-slide";
+      scatterDiv.id = "scatter-slide";
       scatterDiv.style.width = "100%";
       scatterDiv.style.marginTop = "20px";
 
-      el.querySelector(".description")!
+      el.querySelector(".description")
         .insertAdjacentElement("afterend", scatterDiv);
     }
 
     // Slide 5: Choropleth map
     if (slide.headline === "Where are you from?") {
       const mapDiv = document.createElement("div");
-      mapDiv.id     = "map-container";
-      mapDiv.style.width  = "100%";
+      mapDiv.id = "map-container";
+      mapDiv.style.width = "100%";
       mapDiv.style.height = "400px";
       mapDiv.style.margin = "20px 0";
 
-      el.querySelector(".description")!
+      el.querySelector(".description")
         .insertAdjacentElement("afterend", mapDiv);
     }
 
@@ -124,10 +118,10 @@ function initCarousel() {
 
   // Navigation buttons
   elems.forEach((el, i) => {
-    const prev = el.querySelector<HTMLButtonElement>(".prev")!;
-    const next = el.querySelector<HTMLButtonElement>(".next")!;
+    const prev = el.querySelector(".prev");
+    const next = el.querySelector(".next");
     prev.style.visibility = i === 0 ? "hidden" : "visible";
-    next.textContent      = i === slides.length - 1 ? "Go to Dashboard →" : "Next →";
+    next.textContent = i === slides.length - 1 ? "Go to Dashboard →" : "Next →";
     prev.onclick = () => navigate(-1);
     next.onclick = () => navigate(1);
   });
@@ -137,9 +131,9 @@ function initCarousel() {
   renderSlideContent(current);
 }
 
-function navigate(dir: number) {
+function navigate(dir) {
   const isFirst = current === 0;
-  const isLast  = current === slides.length - 1;
+  const isLast = current === slides.length - 1;
 
   if (isFirst && dir === -1) return;
   if (isLast && dir === 1) {
@@ -148,7 +142,7 @@ function navigate(dir: number) {
     return;
   }
 
-  const allSlides = Array.from(document.querySelectorAll<HTMLDivElement>(".slide-container .slide"));
+  const allSlides = Array.from(document.querySelectorAll(".slide-container .slide"));
   allSlides[current].classList.remove("active");
   current += dir;
   allSlides[current].classList.add("active");
@@ -157,9 +151,8 @@ function navigate(dir: number) {
   renderSlideContent(current);
 }
 
-function renderSlideContent(idx: number) {
+function renderSlideContent(idx) {
   const title = slides[idx].headline;
-
 
   if (title === "The 38 member countries" &&
       !document.querySelector("#member-countries-grid .country-box")) {

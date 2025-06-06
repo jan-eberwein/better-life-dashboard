@@ -1,7 +1,4 @@
-// src/indexWidget.ts
 import * as d3 from "d3";
-
-type Row = Record<string, any>;
 
 // define groups and their underlying CSV columns
 const GROUPS = {
@@ -52,23 +49,15 @@ const GROUPS = {
     "Employees working very long hours",
     "Time devoted to leisure and personal care"
   ]
-} as const;
-
-type Group = keyof typeof GROUPS;
+};
 
 // assign each group a distinct color
-const groupColor = d3.scaleOrdinal<string,string>()
+const groupColor = d3.scaleOrdinal()
   .domain(Object.keys(GROUPS))
-  .range(d3.schemeSet3 as string[]);
+  .range(d3.schemeSet3);
 
-interface CountryScores {
-  Country: string;
-  scores: Record<Group, number>;
-  composite: number;
-}
-
-export async function drawIndexWidget(containerId: string) {
-  const container = d3.select<HTMLElement,unknown>("#" + containerId);
+export async function drawIndexWidget(containerId) {
+  const container = d3.select("#" + containerId);
   container.selectAll("*").remove();
   container
     .style("font-family", "'Railway', sans-serif")
@@ -78,17 +67,17 @@ export async function drawIndexWidget(containerId: string) {
     .style("background", "#fafafa");
 
   // load data
-  const raw: Row[] = await d3.csv("/data/2024BetterLife.csv", d3.autoType);
+  const raw = await d3.csv("/data/2024BetterLife.csv", d3.autoType);
 
   // precompute group scores per country
-  const countries: CountryScores[] = raw.map(r => {
-    const scores = {} as Record<Group, number>;
-    for (const grp of Object.keys(GROUPS) as Group[]) {
+  const countries = raw.map(r => {
+    const scores = {};
+    Object.keys(GROUPS).forEach(grp => {
       const vals = GROUPS[grp]
         .map(c => +r[c])
         .filter(v => !isNaN(v));
-      scores[grp] = vals.length ? d3.mean(vals)! : 0;
-    }
+      scores[grp] = vals.length ? d3.mean(vals) : 0;
+    });
     return { Country: r.Country, scores, composite: 0 };
   });
 
@@ -100,9 +89,8 @@ export async function drawIndexWidget(containerId: string) {
     .style("margin-bottom", "12px");
 
   // weight store
-  const weight = {} as Record<Group, number>;
-
-  (Object.keys(GROUPS) as Group[]).forEach(grp => {
+  const weight = {};
+  Object.keys(GROUPS).forEach(grp => {
     weight[grp] = 0;
     const wrap = controls.append("div")
       .style("font-size", "14px")
@@ -120,11 +108,11 @@ export async function drawIndexWidget(containerId: string) {
       .style("width", "100%")
       .style("accent-color", groupColor(grp))
       .on("input", function() {
-        weight[grp] = +(this as HTMLInputElement).value;
+        weight[grp] = +this.value;
         updateRanking();
       })
       .on("input.value", function() {
-        wrap.select(".slider-value").text((this as HTMLInputElement).value);
+        wrap.select(".slider-value").text(this.value);
       });
 
     wrap.append("span")
@@ -160,26 +148,26 @@ export async function drawIndexWidget(containerId: string) {
 
     countries.forEach(c => {
       let s = 0;
-      for (const [grp, w] of Object.entries(useWeights) as [Group, number][]) {
+      Object.entries(useWeights).forEach(([grp, w]) => {
         s += (c.scores[grp] || 0) * w;
-      }
+      });
       c.composite = sumW ? s / sumW : 0;
     });
     countries.sort((a, b) => b.composite - a.composite);
 
     // draw bars
     const margin = { top: 20, right: 20, bottom: 20, left: 150 };
-    const cw = (chartWrap.node() as HTMLElement).clientWidth;
+    const cw = chartWrap.node().clientWidth;
     const width = cw - margin.left - margin.right;
     const height = countries.length * 20;
 
     svg.attr("height", height + margin.top + margin.bottom).selectAll("*").remove();
 
     const x = d3.scaleLinear()
-      .domain([0, d3.max(countries, d => d.composite)!])
+      .domain([0, d3.max(countries, d => d.composite)])
       .range([0, width]);
 
-    const y = d3.scaleBand<string>()
+    const y = d3.scaleBand()
       .domain(countries.map(d => d.Country))
       .range([margin.top, margin.top + height])
       .padding(0.1);
@@ -191,11 +179,11 @@ export async function drawIndexWidget(containerId: string) {
 
     // bars
     svg.append("g")
-      .attr("transform", `translate(${margin.left},0)`)      
+      .attr("transform", `translate(${margin.left},0)`)
       .selectAll("rect")
       .data(countries)
       .join("rect")
-        .attr("y", d => y(d.Country)!)
+        .attr("y", d => y(d.Country))
         .attr("width", d => x(d.composite))
         .attr("height", y.bandwidth())
         .attr("fill", "#69b3a2")
@@ -212,19 +200,19 @@ export async function drawIndexWidget(containerId: string) {
 
     // labels
     svg.append("g")
-      .attr("transform", `translate(${margin.left - 6},0)`)      
+      .attr("transform", `translate(${margin.left - 6},0)`)
       .selectAll("text")
       .data(countries)
       .join("text")
         .attr("x", 0)
-        .attr("y", d => y(d.Country)! + y.bandwidth()/2)
+        .attr("y", d => y(d.Country) + y.bandwidth() / 2)
         .attr("dy", "0.35em")
         .attr("text-anchor", "end")
         .style("font-size", "12px")
         .text(d => d.Country);
   }
 
-  function drawRadarTooltip(c: CountryScores) {
+  function drawRadarTooltip(c) {
     tooltip.html("");
     const size = 120;
     const r = size / 2 - 10;
@@ -233,11 +221,11 @@ export async function drawIndexWidget(containerId: string) {
       .attr("height", size)
       .style("font-family", "'Railway', sans-serif");
 
-    const groups = Object.keys(GROUPS) as Group[];
+    const groups = Object.keys(GROUPS);
     const values = groups.map(g => c.scores[g]);
     const angleStep = Math.PI * 2 / groups.length;
     const radial = d3.scaleLinear()
-      .domain([0, d3.max(values)!])
+      .domain([0, d3.max(values)])
       .range([0, r]);
 
     // grid lines
@@ -252,12 +240,12 @@ export async function drawIndexWidget(containerId: string) {
     }
 
     // polygon
-    const line = d3.lineRadial<number>()
+    const line = d3.lineRadial()
       .radius(d => radial(d))
       .angle((_, i) => i * angleStep);
     svgT.append("path")
-      .datum(values)
-      
+      .datum(values);
+    // (Original code ends here; continue logic if needed)
   }
 
   // init

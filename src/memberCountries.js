@@ -8,42 +8,42 @@ export const GROUPS = {
   Housing: [
     "Dwellings without basic facilities",
     "Housing expenditure",
-    "Rooms per person"
+    "Rooms per person",
   ],
   Income: [
     "GDP per capita (USD)",
     "Household net adjusted disposable income",
     "Household net wealth",
-    "Personal earnings"
+    "Personal earnings",
   ],
   Jobs: [
     "Labour market insecurity",
     "Employment rate",
-    "Long-term unemployment rate"
+    "Long-term unemployment rate",
   ],
   Community: ["Quality of support network"],
   Education: ["Educational attainment", "Student skills", "Years in education"],
   Environment: ["Air pollution", "Water quality"],
   "Civic Engagement": [
     "Stakeholder engagement for developing regulations",
-    "Voter turnout"
+    "Voter turnout",
   ],
   Health: ["Life expectancy", "Self-reported health"],
   "Life Satisfaction": ["Life satisfaction"],
   Safety: ["Feeling safe walking alone at night", "Homicide rate"],
   "Work-Life Balance": [
     "Employees working very long hours",
-    "Time devoted to leisure and personal care"
-  ]
+    "Time devoted to leisure and personal care",
+  ],
 };
 
 export async function renderCountryGrid(selector) {
   // 1) load and auto-type the CSV
   const raw = await d3.csv(CSV_URL, d3.autoType);
 
-  // 2) trim all header names on each row (remove those pesky leading spaces)
-  raw.forEach(row => {
-    Object.keys(row).forEach(key => {
+  // 2) trim all header names on each row (remove leading/trailing spaces)
+  raw.forEach((row) => {
+    Object.keys(row).forEach((key) => {
       const trimmed = key.trim();
       if (trimmed !== key) {
         row[trimmed] = row[key];
@@ -53,32 +53,31 @@ export async function renderCountryGrid(selector) {
   });
 
   // 3) compute per-category averages into a new _groupAvg field
-  raw.forEach(row => {
+  raw.forEach((row) => {
     row._groupAvg = {};
-    for (const cat of Object.keys(GROUPS)) {
-      const cols = GROUPS[cat];
-      const vals = cols
-        .map(c => row[c])
-        .filter(v => v != null && !isNaN(v));
+    Object.keys(GROUPS).forEach((cat) => {
+      const vals = GROUPS[cat]
+        .map((c) => row[c])
+        .filter((v) => v != null && !isNaN(v));
       row._groupAvg[cat] = vals.length ? d3.mean(vals) : null;
-    }
+    });
   });
 
   // 4) build a 1–10 scale for each category (clamped)
   const scales = {};
-  for (const cat of Object.keys(GROUPS)) {
+  Object.keys(GROUPS).forEach((cat) => {
     const all = raw
-      .map(d => d._groupAvg[cat])
-      .filter(v => v != null);
+      .map((d) => d._groupAvg[cat])
+      .filter((v) => v != null);
     const [min, max] = d3.extent(all);
     scales[cat] = d3
       .scaleLinear()
       .domain([min, max])
       .range([1, 10])
       .clamp(true);
-  }
+  });
 
-  // tooltip container
+  // tooltip container (for hover details)
   const tooltip = d3
     .select("body")
     .append("div")
@@ -114,13 +113,23 @@ export async function renderCountryGrid(selector) {
     .style("overflow", "hidden")
     .style("text-align", "center")
     .style("background", "#fafafa")
-    .style("padding", "8px");
+    .style("padding", "8px")
+    // ** Hover animation: scale + shadow **
+    .style("transition", "transform 0.2s ease, box-shadow 0.2s ease")
+    .on("mouseover", function () {
+      d3.select(this)
+        .style("transform", "scale(1.05)")
+        .style("box-shadow", "0 4px 8px rgba(0,0,0,0.2)");
+    })
+    .on("mouseout", function () {
+      d3.select(this).style("transform", "").style("box-shadow", "");
+    });
 
   // flag emoji
   boxes
     .append("div")
     .attr("class", "country-flag")
-    .text(d => d.Flag)
+    .text((d) => d.Flag)
     .style("font-size", "32px")
     .style("line-height", "1");
 
@@ -128,14 +137,14 @@ export async function renderCountryGrid(selector) {
   boxes
     .append("div")
     .attr("class", "country-name")
-    .text(d => d.Country)
+    .text((d) => d.Country)
     .style("margin-top", "4px")
     .style("font-size", "14px")
     .style("font-weight", "bold");
 
-  // hover behavior
+  // hover tooltip behavior
   boxes
-    .on("mouseover", (event, d) => {
+    .on("mouseover.tooltip", (event, d) => {
       tooltip.html("");
 
       // --- header: flag + name, population + raw life satisfaction ---
@@ -151,7 +160,9 @@ export async function renderCountryGrid(selector) {
       const lsRaw = d["Life satisfaction"];
       header
         .append("div")
-        .text(`Life satisfaction: ${lsRaw != null ? lsRaw.toFixed(1) : "—"}`);
+        .text(`Life satisfaction: ${
+          lsRaw != null ? lsRaw.toFixed(1) : "—"
+        }`);
 
       // separator
       tooltip
@@ -161,7 +172,7 @@ export async function renderCountryGrid(selector) {
         .style("margin", "8px 0");
 
       // --- all category ratings 1–10 ---
-      for (const cat of Object.keys(GROUPS)) {
+      Object.keys(GROUPS).forEach((cat) => {
         const avg = d._groupAvg[cat];
         if (avg != null) {
           const rating = scales[cat](avg);
@@ -169,16 +180,40 @@ export async function renderCountryGrid(selector) {
           line.append("strong").text(`${cat}: `);
           line.append("span").text(rating.toFixed(1));
         }
-      }
+      });
 
       tooltip.transition().duration(100).style("opacity", 1);
     })
-    .on("mousemove", event => {
+    .on("mousemove.tooltip", (event) => {
       tooltip
         .style("left", `${event.pageX + 12}px`)
         .style("top", `${event.pageY + 12}px`);
     })
-    .on("mouseout", () => {
+    .on("mouseout.tooltip", () => {
       tooltip.transition().duration(100).style("opacity", 0);
     });
+
+  // click behavior: select country, save to localStorage, enable Next button
+  boxes.on("click", function (event, d) {
+    // Deselect all first
+    container
+      .selectAll(".country-box")
+      .style("border-color", "#ddd")
+      .style("background", "#fafafa")
+      .style("box-shadow", "")
+      .classed("selected", false);
+
+    // Mark this one as selected
+    d3.select(this)
+      .style("border-color", "#007acc")
+      .style("background", "#e6f2ff")
+      .style("box-shadow", "0 0 0 3px rgba(0,122,204,0.5)")
+      .classed("selected", true);
+
+    // Save to localStorage
+    localStorage.setItem("bli-selected-country", d.Country);
+
+    // Dispatch a custom event so main.js can enable “Next”
+    document.dispatchEvent(new CustomEvent("countrySelected"));
+  });
 }

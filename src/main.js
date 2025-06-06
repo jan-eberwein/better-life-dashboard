@@ -13,7 +13,7 @@ const slides = [
     description: `What makes for a good life? Many people might say “money” or “career success,” but quality of life goes far beyond income. The OECD Better Life Index 2024 compares countries not just economically, but across 11 key dimensions that truly shape our daily lives — like health, education, environment, work-life balance, and social connection.<br><br>This project invites you to explore these factors interactively. Through data and storytelling, we’ll uncover where people are most satisfied with life in 2024 — and why.`
   },
   {
-    headline: "The 38 member countries",
+    headline: "Where are you from?",
     description: `The Better Life Index focuses on 38 OECD member countries. These nations vary widely in culture, policy, and — as we’ll see — in overall life satisfaction.<br><br>Take a look at the map below, and you’ll already notice something interesting: countries like Finland, Denmark, and the Netherlands are glowing with high satisfaction scores.<br><br>In contrast, countries like Turkey or Greece show much lower levels of reported life satisfaction. What explains this difference? What are the real drivers of happiness?`
   },
   {
@@ -25,7 +25,7 @@ const slides = [
     description: `Each country has its own strengths — and weaknesses. The Better Life Index evaluates 11 different life aspects: from jobs and health to environment, education, safety, and community.<br><br>No country is best at everything. That’s why we compare “profiles”—unique patterns across all dimensions of well-being. Compare, for example, the Netherlands and the United States. The Netherlands excels in work-life balance and social support, while the U.S. leads in education and income—but falls behind in safety and civic engagement.<br><br>The key insight: top-performing countries aren’t perfect—but balanced. They combine moderate to high values across many dimensions to create a more sustainable satisfaction.`
   },
   {
-    headline: "Where are you from?",
+    headline: "Worldmap",
     description: `Curious about your own country? Use the map below to see how it stacks up against others. Discover where it excels—and where it still has room to grow.`
   },
   {
@@ -80,7 +80,7 @@ function initCarousel() {
     }
 
     // Slide 2: Member-countries grid
-    if (slide.headline === "The 38 member countries") {
+    if (slide.headline === "Where are you from?") {
       const gridDiv = document.createElement("div");
       gridDiv.id = "member-countries-grid";
       gridDiv.style.margin = "20px 0";
@@ -101,7 +101,7 @@ function initCarousel() {
     }
 
     // Slide 5: Choropleth map
-    if (slide.headline === "Where are you from?") {
+    if (slide.headline === "Worldmap") {
       const mapDiv = document.createElement("div");
       mapDiv.id = "map-container";
       mapDiv.style.width = "100%";
@@ -154,7 +154,7 @@ function navigate(dir) {
 function renderSlideContent(idx) {
   const title = slides[idx].headline;
 
-  if (title === "The 38 member countries" &&
+  if (title === "Where are you from?" &&
       !document.querySelector("#member-countries-grid .country-box")) {
     renderCountryGrid("#member-countries-grid");
   }
@@ -164,7 +164,7 @@ function renderSlideContent(idx) {
     drawScatter("scatter-slide");
   }
 
-  if (title === "Where are you from?" &&
+  if (title === "Worldmap" &&
       !document.querySelector("#map-container svg")) {
     drawMap("map-container");
   }

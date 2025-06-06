@@ -138,7 +138,7 @@ function navigate(dir) {
   if (isFirst && dir === -1) return;
   if (isLast && dir === 1) {
     localStorage.setItem(STORAGE_KEY, current.toString());
-    window.location.href = "./dashboard.html";
+    window.location.href = "/dashboard.html";
     return;
   }
 

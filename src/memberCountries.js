@@ -91,7 +91,9 @@ export async function renderCountryGrid(selector) {
     .style("font-family", "'Raleway', sans-serif")
     .style("font-size", "12px")
     .style("box-shadow", "0 2px 6px rgba(0,0,0,0.15)")
-    .style("opacity", 0);
+    // MODIFIED: Start with display: none
+    .style("opacity", 0)
+    .style("display", "none");
 
   // grid container
   const container = d3
@@ -181,8 +183,12 @@ export async function renderCountryGrid(selector) {
           line.append("span").text(rating.toFixed(1));
         }
       });
-
-      tooltip.transition().duration(100).style("opacity", 1);
+      
+      // MODIFIED: Set display to block before fading in
+      tooltip.style("display", "block")
+        .transition()
+        .duration(100)
+        .style("opacity", 1);
     })
     .on("mousemove.tooltip", (event) => {
       tooltip
@@ -190,7 +196,11 @@ export async function renderCountryGrid(selector) {
         .style("top", `${event.pageY + 12}px`);
     })
     .on("mouseout.tooltip", () => {
-      tooltip.transition().duration(100).style("opacity", 0);
+      // MODIFIED: Set display to none after fading out
+      tooltip.transition().duration(100).style("opacity", 0)
+        .end()
+        .then(() => tooltip.style("display", "none"))
+        .catch(() => {}); // Catches transition interruption errors
     });
 
   // click behavior: select country, save to localStorage, enable Next button

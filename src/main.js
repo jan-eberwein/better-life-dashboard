@@ -68,7 +68,7 @@ function initCarousel() {
       const mapDiv = document.createElement("div");
       mapDiv.id = "map-container";
       mapDiv.style.width = "100%";
-      mapDiv.style.height = "320px";
+     mapDiv.style.minHeight = "320px";
       mapDiv.style.margin = "20px 0";
       el.querySelector(".description").insertAdjacentElement("afterend", mapDiv);
     }

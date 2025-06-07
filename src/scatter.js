@@ -7,7 +7,7 @@ export async function drawScatter(containerId) {
   // dimensions
   const fullW = container.node()?.clientWidth || 700;
   const fullH = 500;
-  const margin = { top: 20, right: 20, bottom: 60, left: 60 };
+  const margin = { top: 20, right: 130, bottom: 60, left: 60 }; // Increased right margin for legend
   const w = fullW - margin.left - margin.right;
   const h = fullH - margin.top - margin.bottom;
 
@@ -23,10 +23,10 @@ export async function drawScatter(containerId) {
   const raw = await d3.csv("/data/2024BetterLife.csv", d3.autoType);
   if (!raw.length) return;
 
-  // detect keys
+  // detect keys for new comparison
   const headers = Object.keys(raw[0]);
-  const xKey = headers.find(k => /disposable income/i.test(k));
-  const yKey = headers.find(k => /very long hours/i.test(k));
+  const xKey = headers.find(k => /gdp per capita/i.test(k));
+  const yKey = headers.find(k => /life satisfaction/i.test(k));
   const popKey = headers.find(k => /population/i.test(k));
 
   const data = raw.filter(d => isFinite(d[xKey]) && isFinite(d[yKey]));
@@ -43,7 +43,7 @@ export async function drawScatter(containerId) {
     .nice()
     .range([h, 0]);
   const rScale = popKey
-    ? d3.scaleSqrt().domain(d3.extent(data, d => d[popKey])).range([3, 18])
+    ? d3.scaleSqrt().domain(d3.extent(data, d => d[popKey])).range([5, 25]) // Increased point size
     : () => 6;
 
   // continent palette
@@ -76,7 +76,7 @@ export async function drawScatter(containerId) {
     .attr("transform", `translate(0,${h})`)
     .call(d3.axisBottom(x).tickFormat(d3.format("$.2s")));
   g.append("g")
-    .call(d3.axisLeft(y).tickFormat(d => `${d}%`));
+    .call(d3.axisLeft(y));
 
   // labels
   g.append("text")
@@ -84,7 +84,7 @@ export async function drawScatter(containerId) {
     .attr("y", h + 40)
     .attr("text-anchor", "middle")
     .attr("fill", "#000")
-    .text("Household net adjusted disposable income (USD)");
+    .text("GDP per capita (USD)");
 
   g.append("text")
     .attr("transform", "rotate(-90)")
@@ -92,7 +92,7 @@ export async function drawScatter(containerId) {
     .attr("y", -45)
     .attr("text-anchor", "middle")
     .attr("fill", "#000")
-    .text("Employees working very long hours (%)");
+    .text("Life satisfaction (Score 0-10)");
 
   // tooltip
   let tip = d3.select("body").selectAll(".scatter-tip").data([0]);
@@ -106,6 +106,7 @@ export async function drawScatter(containerId) {
     .merge(tip);
 
   const fmt = d3.format(",");
+  const scoreFmt = d3.format(".1f");
 
   // draw points
   g.selectAll("circle")
@@ -121,12 +122,35 @@ export async function drawScatter(containerId) {
         .style("opacity", 1)
         .html(
           `<strong>${d.Flag} ${d.Country}</strong><br/>
-           Income: $${fmt(d[xKey])}<br/>
-           Hours: ${d[yKey]}%<br/>
+           GDP per capita: $${fmt(d[xKey])}<br/>
+           Life Satisfaction: ${scoreFmt(d[yKey])}<br/>
            Population: ${popKey ? fmt(d[popKey]) : "n/a"}`
         )
         .style("left", e.pageX + 10 + "px")
         .style("top", e.pageY + 10 + "px");
     })
     .on("mouseout", () => d3.select(".scatter-tip").style("opacity", 0));
+    
+  // Add Legend
+  const legend = g.append("g")
+    .attr("class", "legend")
+    .attr("transform", `translate(${w + 20}, 0)`); // Positioned to the right
+
+  const legendItems = legend.selectAll(".legend-item")
+    .data(Object.entries(palette))
+    .join("g")
+    .attr("class", "legend-item")
+    .attr("transform", (d, i) => `translate(0, ${i * 25})`);
+
+  legendItems.append("rect")
+    .attr("width", 18)
+    .attr("height", 18)
+    .attr("fill", d => d[1]);
+
+  legendItems.append("text")
+    .attr("x", 24)
+    .attr("y", 14)
+    .text(d => d[0])
+    .style("font-size", "14px")
+    .attr("alignment-baseline", "middle");
 }

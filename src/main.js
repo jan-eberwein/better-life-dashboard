@@ -13,8 +13,8 @@ const slides = [
     description: `The Better Life Index focuses on 38 OECD member countries. These nations vary widely in culture, policy, and — as we’ll see — in overall life satisfaction.<br><br>Take a look at the map below, and you’ll already notice something interesting: countries like Finland, Denmark, and the Netherlands are glowing with high satisfaction scores.<br><br>In contrast, countries like Turkey or Greece show much lower levels of reported life satisfaction. What explains this difference? What are the real drivers of happiness?`,
   },
   {
-    headline: "Money or time? What really makes us happy?",
-    description: `It’s tempting to assume: more money means more happiness. But let’s test that idea.<br><br>Below is a scatterplot showing average income on the x-axis and the share of people working very long hours on the y-axis — two key factors that shape our day-to-day experience. We might expect that richer countries offer more leisure, while poorer ones require more work. But do the data agree?<br><br>The result is surprising: there’s no strong trend. The U.S., for instance, has high income but also a large share of people working very long hours. On the other hand, the Netherlands — with moderate income — shows one of the lowest rates of overwork.<br><br>In short: money alone doesn’t buy balance. Time — and how it’s spent — may be even more important than wealth. This moment of contradiction keeps the audience curious and engaged: what else matters?`,
+    headline: "Does Money Buy Happiness?",
+    description: `A common belief is that wealth is a direct path to happiness. Let's explore this with data.<br><br>The scatterplot below compares a country's economic output, measured by 'GDP per capita', with the average 'Life Satisfaction' score reported by its citizens. Each bubble represents a country.<br><br>As you can see, there is a clear upward trend: countries with a higher GDP per capita tend to have higher life satisfaction. This suggests that economic prosperity does play a significant role in a nation's well-being.<br><br>However, the relationship isn't perfect. Some countries report higher satisfaction than their GDP would suggest, while others fall below the trend line. This indicates that while money is a factor, other elements like social support, health, and work-life balance are also crucial pieces of the happiness puzzle.`,
   },
   {
     headline: "What does the “perfect” country look like?",
@@ -81,7 +81,7 @@ function initCarousel() {
       gridDiv.style.margin = "20px 0";
       el.querySelector(".description").insertAdjacentElement("afterend", gridDiv);
     }
-    if (slide.headline.startsWith("Money or time")) {
+    if (slide.headline.startsWith("Does Money Buy Happiness")) {
       const scatterDiv = document.createElement("div");
       scatterDiv.id = "scatter-slide";
       scatterDiv.style.width = "100%";
@@ -184,7 +184,7 @@ function renderSlideContent(idx) {
     document.addEventListener("countrySelected", onSelect);
   }
   if (
-    title.startsWith("Money or time") &&
+    title.startsWith("Does Money Buy Happiness") &&
     !document.querySelector("#scatter-slide svg")
   ) {
     drawScatter("scatter-slide");

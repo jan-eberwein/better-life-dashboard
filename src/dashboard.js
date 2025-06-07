@@ -35,8 +35,8 @@ let scatterPlotSvg;
 let scatterPlotG;
 let betterlifeindexDataWide = [];
 let scatterPlotMasterCountry = null;
-let currentXCategory = 'Job satisfaction';
-let currentYCategory = 'Life satisfaction';
+let currentXCategory = 'GDP per capita (USD)'; // Default X-Axis
+let currentYCategory = 'Life satisfaction';      // Default Y-Axis
 let shouldScaleByPopulation = false;
 
 // --- Bar Chart Config & Globals ---

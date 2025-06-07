@@ -41,63 +41,61 @@ function initCarousel() {
   const template = container.querySelector(".slide");
   template.remove();
 
+  // Create and append progress indicator
+  const progressContainer = document.createElement('div');
+  progressContainer.className = 'progress-indicator';
+  slides.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'progress-dot';
+    dot.dataset.index = i;
+    dot.addEventListener('click', () => navigateTo(i)); // Make dots clickable
+    progressContainer.appendChild(dot);
+  });
+  // Place indicator before the slide container
+  container.before(progressContainer);
+
   // Clone & populate slides
   const elems = slides.map((slide, i) => {
     const el = template.cloneNode(true);
     el.querySelector(".headline").innerHTML = slide.headline;
     el.querySelector(".description").innerHTML = slide.description;
 
-    // Slide 1: logo & index widget
     if (i === 0) {
       const logo = document.createElement("img");
       logo.src = "/logo-bli.png";
       logo.alt = "Better Life Index logo";
       logo.className = "logo";
-
       const subtitle = document.createElement("h2");
       subtitle.textContent = "2024 Visualized";
       subtitle.className = "subtitle";
-
       el.prepend(subtitle);
       el.prepend(logo);
-
       const widgetDiv = document.createElement("div");
       widgetDiv.id = "index-widget";
       widgetDiv.style.margin = "20px 0";
-
       el.querySelector(".description").insertAdjacentElement("afterend", widgetDiv);
     }
-
-    // Slide 2: Member-countries grid
     if (slide.headline === "Where are you from?") {
       const gridDiv = document.createElement("div");
       gridDiv.id = "member-countries-grid";
       gridDiv.style.margin = "20px 0";
-
       el.querySelector(".description").insertAdjacentElement("afterend", gridDiv);
     }
-
-    // Slide 3: Scatter
     if (slide.headline.startsWith("Money or time")) {
       const scatterDiv = document.createElement("div");
       scatterDiv.id = "scatter-slide";
       scatterDiv.style.width = "100%";
       scatterDiv.style.marginTop = "20px";
-
       el.querySelector(".description").insertAdjacentElement("afterend", scatterDiv);
     }
-
-    // Slide 5: Choropleth map
     if (slide.headline === "World Map") {
       const mapDiv = document.createElement("div");
       mapDiv.id = "map-container";
       mapDiv.style.width = "100%";
-      mapDiv.style.height = "400px";
+      mapDiv.style.height = "320px";
       mapDiv.style.margin = "20px 0";
-
       el.querySelector(".description").insertAdjacentElement("afterend", mapDiv);
     }
-
     container.append(el);
     return el;
   });
@@ -114,62 +112,83 @@ function initCarousel() {
 
   // Activate current
   elems[current].classList.add("active");
+  updateProgress(current);
   renderSlideContent(current);
 }
 
+// Navigate via Prev/Next buttons
 function navigate(dir) {
-  const isFirst = current === 0;
   const isLast = current === slides.length - 1;
+  const newIndex = current + dir;
 
-  // If first slide, no “Back”
-  if (isFirst && dir === -1) return;
-
-  // If last slide, redirect to dashboard
+  // Special case for last slide's "Next" button
   if (isLast && dir === 1) {
     window.location.href = "/dashboard.html";
     return;
   }
+  
+  // Navigate to the new index
+  navigateTo(newIndex);
+}
+
+// Core function to navigate to a specific slide index
+function navigateTo(index) {
+  if (index < 0 || index >= slides.length || index === current) {
+    return; // Index is out of bounds or already active
+  }
 
   const allSlides = Array.from(document.querySelectorAll(".slide-container .slide"));
+  
   allSlides[current].classList.remove("active");
-  current += dir;
+  current = index;
   allSlides[current].classList.add("active");
-
+  
+  updateProgress(current);
   renderSlideContent(current);
+}
+
+function updateProgress(currentIndex) {
+  const dots = document.querySelectorAll('.progress-indicator .progress-dot');
+  dots.forEach((dot, i) => {
+    dot.classList.remove('active', 'visited');
+    if (i < currentIndex) {
+      dot.classList.add('visited');
+    } else if (i === currentIndex) {
+      dot.classList.add('active');
+    }
+  });
+  // Add cursor pointer to non-active dots
+  dots.forEach((dot, i) => {
+    if (i !== currentIndex) {
+      dot.style.cursor = 'pointer';
+    } else {
+      dot.style.cursor = 'default';
+    }
+  });
 }
 
 function renderSlideContent(idx) {
   const title = slides[idx].headline;
-
-  // “38 member countries” slide
   if (
     title === "Where are you from?" &&
     !document.querySelector("#member-countries-grid .country-box")
   ) {
     renderCountryGrid("#member-countries-grid");
-
-    // Disable this slide’s Next button until a country is selected
     const slideEl = document.querySelectorAll(".slide-container .slide")[idx];
     const nextBtn = slideEl.querySelector(".next");
     nextBtn.disabled = true;
-
-    // Listen for the custom “countrySelected” event
     function onSelect() {
       nextBtn.disabled = false;
       document.removeEventListener("countrySelected", onSelect);
     }
     document.addEventListener("countrySelected", onSelect);
   }
-
-  // “Money or time” slide
   if (
     title.startsWith("Money or time") &&
     !document.querySelector("#scatter-slide svg")
   ) {
     drawScatter("scatter-slide");
   }
-
-  // “World Map” slide
   if (
     title === "World Map" &&
     !document.querySelector("#map-container svg")
@@ -178,7 +197,6 @@ function renderSlideContent(idx) {
   }
 }
 
-// ← / → arrow keys
 window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") navigate(1);
   else if (e.key === "ArrowLeft") navigate(-1);

@@ -420,3 +420,62 @@ body {
 .tooltip-chart svg {
   overflow: visible;
 }
+
+
+/* 10 ▸ PROGRESS INDICATOR
+   ───────────────────────────────*/
+.carousel {
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.progress-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1rem 0;
+    gap: 45px;
+}
+
+.progress-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    /* Upcoming (default state) */
+    background-color: var(--color-white);
+    border: 2px solid #ccc;
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s ease;
+}
+
+.progress-dot:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 2px;
+    width: 60px; /* Adjust space between dots */
+    background-color: #ccc; /* Upcoming line */
+    z-index: 1;
+    transition: background-color 0.3s ease;
+    margin-left: 2px; /* Small gap from dot */
+}
+
+/* State: Visited (and line after it) */
+.progress-dot.visited {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.progress-dot.visited::after {
+    background-color: var(--color-primary);
+}
+
+/* State: Active */
+.progress-dot.active {
+    border-color: #a0a0a0;
+    background-color: #dcdcdc; /* Light gray filled */
+    transform: scale(1.1);
+}

@@ -20,8 +20,11 @@ export async function drawScatter(containerId) {
   const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
   // load & parse
-  const raw = await d3.csv("/data/2024BetterLife.csv", d3.autoType);
+  const raw = await d3.csv("/data/2024BetterLife.csv", d3.autoType); //
   if (!raw.length) return;
+
+  // Get selected country from localStorage
+  const selectedCountry = localStorage.getItem("bli-selected-country");
 
   // detect keys for new comparison
   const headers = Object.keys(raw[0]);
@@ -42,8 +45,10 @@ export async function drawScatter(containerId) {
     .domain(d3.extent(data, d => d[yKey]))
     .nice()
     .range([h, 0]);
+
+  // MODIFIED: Keep min size, increase max size
   const rScale = popKey
-    ? d3.scaleSqrt().domain(d3.extent(data, d => d[popKey])).range([5, 25]) // Increased point size
+    ? d3.scaleSqrt().domain(d3.extent(data, d => d[popKey])).range([5, 30])
     : () => 6;
 
   // continent palette
@@ -109,32 +114,39 @@ export async function drawScatter(containerId) {
   const scoreFmt = d3.format(".1f");
 
   // draw points
-  g.selectAll("circle")
+  const circles = g.selectAll("circle")
     .data(data, d => d.Country)
     .join("circle")
-    .attr("cx", d => x(d[xKey]))
-    .attr("cy", d => y(d[yKey]))
-    .attr("r", d => (popKey ? rScale(d[popKey]) : rScale()))
-    .attr("fill", d => palette[regionOf(d.Country)])
-    .attr("opacity", 0.8)
-    .on("mouseover", (e, d) => {
-      d3.select(".scatter-tip")
-        .style("opacity", 1)
-        .html(
-          `<strong>${d.Flag} ${d.Country}</strong><br/>
-           GDP per capita: $${fmt(d[xKey])}<br/>
-           Life Satisfaction: ${scoreFmt(d[yKey])}<br/>
-           Population: ${popKey ? fmt(d[popKey]) : "n/a"}`
-        )
-        .style("left", e.pageX + 10 + "px")
-        .style("top", e.pageY + 10 + "px");
-    })
-    .on("mouseout", () => d3.select(".scatter-tip").style("opacity", 0));
+      .attr("cx", d => x(d[xKey]))
+      .attr("cy", d => y(d[yKey]))
+      .attr("r", d => (popKey ? rScale(d[popKey]) : rScale()))
+      .attr("fill", d => palette[regionOf(d.Country)])
+      .attr("opacity", d => (selectedCountry && d.Country !== selectedCountry) ? 0.5 : 0.9)
+      .attr("stroke", d => d.Country === selectedCountry ? "black" : "none")
+      .attr("stroke-width", d => d.Country === selectedCountry ? 2 : 0)
+      .on("mouseover", (e, d) => {
+        d3.select(".scatter-tip")
+          .style("opacity", 1)
+          .html(
+            `<strong>${d.Flag} ${d.Country}</strong><br/>
+             GDP per capita: $${fmt(d[xKey])}<br/>
+             Life Satisfaction: ${scoreFmt(d[yKey])}<br/>
+             Population: ${popKey ? fmt(d[popKey]) : "n/a"}`
+          )
+          .style("left", e.pageX + 10 + "px")
+          .style("top", e.pageY + 10 + "px");
+      })
+      .on("mouseout", () => d3.select(".scatter-tip").style("opacity", 0));
+      
+  // Raise the selected country's circle to be on top
+  if (selectedCountry) {
+    circles.filter(d => d.Country === selectedCountry).raise();
+  }
     
   // Add Legend
   const legend = g.append("g")
     .attr("class", "legend")
-    .attr("transform", `translate(${w + 20}, 0)`); // Positioned to the right
+    .attr("transform", `translate(${w + 20}, 0)`);
 
   const legendItems = legend.selectAll(".legend-item")
     .data(Object.entries(palette))
@@ -145,12 +157,14 @@ export async function drawScatter(containerId) {
   legendItems.append("rect")
     .attr("width", 18)
     .attr("height", 18)
-    .attr("fill", d => d[1]);
+    .attr("fill", d => d[1])
+    .attr("opacity", selectedCountry ? 0.5 : 0.9);
 
   legendItems.append("text")
     .attr("x", 24)
     .attr("y", 14)
     .text(d => d[0])
     .style("font-size", "14px")
-    .attr("alignment-baseline", "middle");
+    .attr("alignment-baseline", "middle")
+    .attr("opacity", selectedCountry ? 0.7 : 1.0);
 }

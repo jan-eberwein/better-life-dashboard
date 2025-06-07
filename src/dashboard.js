@@ -27,10 +27,20 @@ const formatIndicatorRadar = (ind) => ({
 // --- Scatter Plot Config & Globals ---
 const scatterPlotFullWidth = 750;
 const scatterPlotFullHeight = 550;
-const scatterPlotMargin = { top: 30, right: 30, bottom: 50, left: 60 };
+const scatterPlotMargin = { top: 30, right: 130, bottom: 50, left: 60 };
 const scatterPlotFixedRadius = 5;
-const scatterPlotHighlightColor = "orange";
-const scatterPlotAnimationDuration = 750; // Animation duration
+const scatterPlotHighlightColor = "orange"; // This is no longer used for fill, but kept for potential future use
+const scatterPlotAnimationDuration = 750;
+
+const continentPalette = {
+    Europe: "#1f77b4",
+    Americas: "#ff7f0e",
+    Asia: "#2ca02c",
+    Oceania: "#d62728",
+    Africa: "#9467bd",
+    "OECD Average": "#8c564b",
+    Other: "#7f7f7f"
+};
 
 let scatterPlotSvg;
 let scatterPlotG;
@@ -39,6 +49,7 @@ let scatterPlotMasterCountry = null;
 let currentXCategory = 'GDP per capita (USD)';
 let currentYCategory = 'Life satisfaction';
 let shouldScaleByPopulation = false;
+let shouldColorByContinent = false;
 
 // --- Bar Chart Config & Globals ---
 const barChartFullWidth = 900;
@@ -99,6 +110,7 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
     const xAxisSelect = document.getElementById('x-axis-select');
     const yAxisSelect = document.getElementById('y-axis-select');
     const scalePopCheckbox = document.getElementById('scale-population-checkbox');
+    const colorByContinentCheckbox = document.getElementById('color-by-continent-checkbox');
     numericKeys = Object.keys(raw[0]).filter(k => k !== 'Country' && k !== 'Flag' && k !== 'Population' && typeof raw[0][k] === 'number');
     if (xAxisSelect && yAxisSelect) {
         for (const k of numericKeys) {
@@ -110,6 +122,9 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
     }
     if (scalePopCheckbox) {
         scalePopCheckbox.checked = shouldScaleByPopulation;
+    }
+    if (colorByContinentCheckbox) {
+        colorByContinentCheckbox.checked = shouldColorByContinent;
     }
 
     // --- Bar Chart Controls ---
@@ -140,6 +155,7 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
     if (xAxisSelect) xAxisSelect.onchange = () => { currentXCategory = xAxisSelect.value; renderScatterPlot(); };
     if (yAxisSelect) yAxisSelect.onchange = () => { currentYCategory = yAxisSelect.value; renderScatterPlot(); };
     if (scalePopCheckbox) scalePopCheckbox.onchange = () => { shouldScaleByPopulation = scalePopCheckbox.checked; renderScatterPlot(); };
+    if (colorByContinentCheckbox) colorByContinentCheckbox.onchange = () => { shouldColorByContinent = colorByContinentCheckbox.checked; renderScatterPlot(); };
     if (countrySelect) countrySelect.onchange = () => {
         scatterPlotMasterCountry = countrySelect.value;
         localStorage.setItem('bli-selected-country', scatterPlotMasterCountry);
@@ -242,7 +258,12 @@ function renderScatterPlot() {
                 .remove()
             )
     )
-    .attr('fill', d => d.Country === scatterPlotMasterCountry ? scatterPlotHighlightColor : '#007acc')
+    // MODIFIED: Simplified fill logic
+    .attr('fill', d => {
+        if (shouldColorByContinent) return continentPalette[regionOf(d.Country)] || '#ccc';
+        return '#007acc';
+    })
+    // Highlighting is now done only by opacity and stroke
     .attr('fill-opacity', d => d.Country === scatterPlotMasterCountry ? 1 : 0.6)
     .attr('stroke', d => d.Country === scatterPlotMasterCountry ? 'black' : 'none')
     .on('mouseover', (event, d) => {
@@ -253,6 +274,38 @@ function renderScatterPlot() {
         d3.select(event.currentTarget).raise();
     })
     .on('mouseout', () => tooltip.style('opacity',0));
+
+    // Add conditional legend
+    scatterPlotG.select('.scatter-legend').remove();
+
+    if (shouldColorByContinent) {
+        const legend = scatterPlotG.append("g")
+            .attr("class", "scatter-legend")
+            .attr("transform", `translate(${drawingWidth + 20}, 0)`);
+        
+        const excludedKeys = ["Africa", "OECD Average", "Other"];
+        const legendData = Object.entries(continentPalette)
+                                 .filter(([key]) => !excludedKeys.includes(key));
+
+        const legendItems = legend.selectAll(".legend-item")
+            .data(legendData)
+            .join("g")
+            .attr("class", "legend-item")
+            .attr("transform", (d, i) => `translate(0, ${i * 20})`);
+
+        legendItems.append("rect")
+            .attr("width", 15)
+            .attr("height", 15)
+            .attr("fill", d => d[1])
+            .attr("fill-opacity", 0.6);
+
+        legendItems.append("text")
+            .attr("x", 20)
+            .attr("y", 12)
+            .text(d => d[0])
+            .style("font-size", "12px")
+            .attr("alignment-baseline", "middle");
+    }
 }
 
 // 4. Radar Chart Functions

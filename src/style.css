@@ -479,3 +479,12 @@ body {
 #tooltip.hidden {
     opacity: 0;
 }
+
+/* Styling for the selection notification on slide 2 */
+.selection-notification {
+    text-align: center;
+    margin-top: 1rem;
+    color: #777;
+    font-style: italic;
+    font-size: 0.9rem;
+}

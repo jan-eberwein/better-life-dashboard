@@ -216,7 +216,11 @@ export async function drawMap(containerId, options) {
     .style("font-family", "'Raleway', sans-serif")
     .style("font-size", "12px")
     .style("z-index", "3");
-  d3.select(container).on("mouseleave", () => tooltip.classed("hidden", true));
+  
+  // *** FIX: Attach mouseleave event to the SVG element to hide tooltip ***
+  svg.on("mouseleave", () => {
+    tooltip.classed("hidden", true);
+  });
 
   // Color scale by life satisfaction
   const colorScale = d3.scaleSequential(d3.interpolateRdYlGn)

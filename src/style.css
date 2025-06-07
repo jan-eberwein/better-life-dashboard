@@ -479,3 +479,13 @@ body {
     background-color: #dcdcdc; /* Light gray filled */
     transform: scale(1.1);
 }
+
+/* FIX for Map Tooltip Visibility */
+#tooltip {
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
+}
+
+#tooltip.hidden {
+    opacity: 0;
+}

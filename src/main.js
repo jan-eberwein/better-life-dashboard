@@ -2,9 +2,6 @@ import { drawScatter } from "./scatter.js";
 import { drawMap } from "./map.js";
 import { renderCountryGrid } from "./memberCountries.js";
 
-// Key for persisting the current slide index
-const STORAGE_KEY = "bli-current-slide";
-
 // Slides for the introduction carousel
 const slides = [
   {
@@ -34,12 +31,6 @@ const slides = [
 ];
 
 let current = 0;
-// Restore saved slide index
-const saved = localStorage.getItem(STORAGE_KEY);
-if (saved !== null) {
-  const idx = parseInt(saved, 10);
-  if (!isNaN(idx) && idx >= 0 && idx < slides.length) current = idx;
-}
 
 document.addEventListener("DOMContentLoaded", () => {
   initCarousel();
@@ -135,7 +126,6 @@ function navigate(dir) {
 
   // If last slide, redirect to dashboard
   if (isLast && dir === 1) {
-    localStorage.setItem(STORAGE_KEY, current.toString());
     window.location.href = "/dashboard.html";
     return;
   }
@@ -144,7 +134,6 @@ function navigate(dir) {
   allSlides[current].classList.remove("active");
   current += dir;
   allSlides[current].classList.add("active");
-  localStorage.setItem(STORAGE_KEY, current.toString());
 
   renderSlideContent(current);
 }

@@ -30,13 +30,14 @@ const scatterPlotFullHeight = 550;
 const scatterPlotMargin = { top: 30, right: 30, bottom: 50, left: 60 };
 const scatterPlotFixedRadius = 5;
 const scatterPlotHighlightColor = "orange";
+const scatterPlotAnimationDuration = 750; // Animation duration
 
 let scatterPlotSvg;
 let scatterPlotG;
 let betterlifeindexDataWide = [];
 let scatterPlotMasterCountry = null;
-let currentXCategory = 'GDP per capita (USD)'; // Default X-Axis
-let currentYCategory = 'Life satisfaction';      // Default Y-Axis
+let currentXCategory = 'GDP per capita (USD)';
+let currentYCategory = 'Life satisfaction';
 let shouldScaleByPopulation = false;
 
 // --- Bar Chart Config & Globals ---
@@ -60,9 +61,7 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
     // --- Common Country Selector ---
     const countrySelect = document.getElementById('country-select');
     if (countrySelect) {
-        // populate options
         countrySelect.innerHTML = countries.map(c => `<option value="${c}">${c}</option>`).join('');
-        // pre-select saved country if exists, otherwise default to first
         const savedCountry = localStorage.getItem('bli-selected-country');
         if (savedCountry && countries.includes(savedCountry)) {
             countrySelect.value = savedCountry;
@@ -93,7 +92,6 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
             extentByIndicatorRadar.set(ind, [d3.min(vals), d3.max(vals)]);
         } else {
             extentByIndicatorRadar.set(ind, [0, 0]);
-            console.warn(`No valid data for radar indicator: ${ind}`);
         }
     }
 
@@ -101,9 +99,7 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
     const xAxisSelect = document.getElementById('x-axis-select');
     const yAxisSelect = document.getElementById('y-axis-select');
     const scalePopCheckbox = document.getElementById('scale-population-checkbox');
-
     numericKeys = Object.keys(raw[0]).filter(k => k !== 'Country' && k !== 'Flag' && k !== 'Population' && typeof raw[0][k] === 'number');
-
     if (xAxisSelect && yAxisSelect) {
         for (const k of numericKeys) {
             xAxisSelect.add(new Option(k, k));
@@ -111,32 +107,22 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
         }
         xAxisSelect.value = currentXCategory;
         yAxisSelect.value = currentYCategory;
-    } else {
-        console.error("Scatter axis select elements not found.");
     }
     if (scalePopCheckbox) {
         scalePopCheckbox.checked = shouldScaleByPopulation;
-    } else {
-        console.error("Scale population checkbox not found.");
     }
 
     // --- Bar Chart Controls ---
     const propertySelect = document.getElementById('property-select');
     const numSelect = document.getElementById('num-select');
     const continentCheckbox = document.getElementById('continent-mode');
-
     if (propertySelect) {
         numericKeys.forEach(k => propertySelect.add(new Option(k, k)));
         if (numericKeys.length > 0) propertySelect.value = numericKeys[0];
-    } else {
-        console.error("Bar chart property select not found.");
     }
-
     if (numSelect) {
         ['Top 3', 'Top 5', 'Top 10', 'Top 15', 'All'].forEach(o => numSelect.add(new Option(o, o)));
         numSelect.value = 'Top 10';
-    } else {
-        console.error("Bar chart num select not found.");
     }
 
     // Setup SVG containers
@@ -156,7 +142,7 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
     if (scalePopCheckbox) scalePopCheckbox.onchange = () => { shouldScaleByPopulation = scalePopCheckbox.checked; renderScatterPlot(); };
     if (countrySelect) countrySelect.onchange = () => {
         scatterPlotMasterCountry = countrySelect.value;
-        localStorage.setItem('bli-selected-country', scatterPlotMasterCountry); // Save selection
+        localStorage.setItem('bli-selected-country', scatterPlotMasterCountry);
         renderScatterPlot();
         if (scatterPlotMasterCountry) renderRadarChart('#chart', radarChartLongData, extentByIndicatorRadar, scatterPlotMasterCountry);
     };
@@ -180,6 +166,12 @@ function setupScatterPlotSVG(selector) {
         .attr('style', 'max-width: 100%; height: auto; background: #f9f9f9; font-family: Raleway, sans-serif; border: 1px solid #ddd;');
     scatterPlotG = scatterPlotSvg.append('g')
         .attr('transform', `translate(${scatterPlotMargin.left},${scatterPlotMargin.top})`);
+    
+    // Create persistent axis and label groups
+    scatterPlotG.append('g').attr('class', 'x-axis');
+    scatterPlotG.append('g').attr('class', 'y-axis');
+    scatterPlotG.append('text').attr('class', 'x-label').attr('text-anchor', 'middle').attr('fill','black').style('font-size','12px');
+    scatterPlotG.append('text').attr('class', 'y-label').attr('text-anchor', 'middle').attr('fill','black').style('font-size','12px').attr('transform','rotate(-90)');
 }
 
 function renderScatterPlot() {
@@ -191,15 +183,32 @@ function renderScatterPlot() {
         typeof d[currentYCategory] === 'number' && !isNaN(d[currentYCategory]) &&
         d.Population !== undefined && typeof d.Population === 'number' && !isNaN(d.Population)
     );
-    if (!filteredData.length) { scatterPlotG.selectAll('*').remove(); return; }
+    
     const xScale = d3.scaleLinear().domain(d3.extent(filteredData, d => d[currentXCategory])).nice().range([0, drawingWidth]);
     const yScale = d3.scaleLinear().domain(d3.extent(filteredData, d => d[currentYCategory])).nice().range([drawingHeight, 0]);
-    const radiusScale = shouldScaleByPopulation ? d3.scaleSqrt().domain(d3.extent(filteredData, d => d.Population)).range([3, 25]) : () => scatterPlotFixedRadius;
-    scatterPlotG.selectAll('*').remove();
-    scatterPlotG.append('g').attr('transform', `translate(0,${drawingHeight})`).call(d3.axisBottom(xScale));
-    scatterPlotG.append('g').call(d3.axisLeft(yScale));
-    scatterPlotG.append('text').attr('class', 'x-label').attr('text-anchor', 'middle').attr('x', drawingWidth/2).attr('y', drawingHeight + scatterPlotMargin.bottom -10).text(currentXCategory).style('font-size','12px').attr('fill','black');
-    scatterPlotG.append('text').attr('class','y-label').attr('text-anchor','middle').attr('transform','rotate(-90)').attr('x', -drawingHeight/2).attr('y', -scatterPlotMargin.left+15).text(currentYCategory).style('font-size','12px').attr('fill','black');
+    const radiusScale = d3.scaleSqrt().domain(d3.extent(filteredData, d => d.Population)).range([3, 25]);
+    
+    // Animate Axes
+    scatterPlotG.select('.x-axis')
+        .attr('transform', `translate(0,${drawingHeight})`)
+        .transition().duration(scatterPlotAnimationDuration)
+        .call(d3.axisBottom(xScale));
+        
+    scatterPlotG.select('.y-axis')
+        .transition().duration(scatterPlotAnimationDuration)
+        .call(d3.axisLeft(yScale));
+
+    // Update Labels
+    scatterPlotG.select('.x-label')
+        .attr('x', drawingWidth / 2)
+        .attr('y', drawingHeight + scatterPlotMargin.bottom - 10)
+        .text(currentXCategory);
+
+    scatterPlotG.select('.y-label')
+        .attr('x', -drawingHeight / 2)
+        .attr('y', -scatterPlotMargin.left + 15)
+        .text(currentYCategory);
+
     let tooltip = d3.select('body').select('.scatter-tooltip-external');
     if (tooltip.empty()) {
         tooltip = d3.select('body').append('div').attr('class','scatter-tooltip-external')
@@ -207,23 +216,43 @@ function renderScatterPlot() {
             .style('border','1px solid #ccc').style('border-radius','4px').style('pointer-events','none')
             .style('opacity',0).style('font-size','11px').style('box-shadow','0 2px 4px rgba(0,0,0,0.1)').style('white-space','nowrap').style('z-index','1050');
     }
-    scatterPlotG.selectAll('circle.data-circle').data(filteredData, d => d.Country)
-        .join('circle')
-        .attr('class','data-circle')
-        .attr('cx', d => xScale(d[currentXCategory]))
-        .attr('cy', d => yScale(d[currentYCategory]))
-        .attr('r', d => radiusScale(d.Population))
-        .attr('fill', d => d.Country === scatterPlotMasterCountry ? scatterPlotHighlightColor : '#007acc')
-        .attr('fill-opacity', d => d.Country === scatterPlotMasterCountry ? 1 : 0.6)
-        .attr('stroke', d => d.Country === scatterPlotMasterCountry ? 'black' : 'none')
-        .on('mouseover', (event, d) => {
-            tooltip.style('opacity',0.9);
-            const formatComma = d3.format(','); // Added for population formatting
-            tooltip.html(`<strong>${d.Country} ${d.Flag || ''}</strong><br>${currentXCategory}: ${d[currentXCategory]}<br>${currentYCategory}: ${d[currentYCategory]}<br>Population: ${formatComma(d.Population)}`)
-                .style('left',`${event.pageX+10}px`).style('top',`${event.pageY-20}px`);
-            d3.select(event.currentTarget).raise();
-        })
-        .on('mouseout', () => tooltip.style('opacity',0));
+
+    // Draw and animate circles
+    const circles = scatterPlotG.selectAll('circle.data-circle')
+        .data(filteredData, d => d.Country);
+
+    circles.join(
+        enter => enter.append('circle')
+            .attr('class', 'data-circle')
+            .attr('cx', d => xScale(d[currentXCategory]))
+            .attr('cy', d => yScale(d[currentYCategory]))
+            .attr('r', 0)
+            .call(s => s.transition().duration(scatterPlotAnimationDuration)
+                .attr('r', d => shouldScaleByPopulation ? radiusScale(d.Population) : scatterPlotFixedRadius)
+            ),
+        update => update
+            .call(s => s.transition().duration(scatterPlotAnimationDuration)
+                .attr('cx', d => xScale(d[currentXCategory]))
+                .attr('cy', d => yScale(d[currentYCategory]))
+                .attr('r', d => shouldScaleByPopulation ? radiusScale(d.Population) : scatterPlotFixedRadius)
+            ),
+        exit => exit
+            .call(s => s.transition().duration(scatterPlotAnimationDuration)
+                .attr('r', 0)
+                .remove()
+            )
+    )
+    .attr('fill', d => d.Country === scatterPlotMasterCountry ? scatterPlotHighlightColor : '#007acc')
+    .attr('fill-opacity', d => d.Country === scatterPlotMasterCountry ? 1 : 0.6)
+    .attr('stroke', d => d.Country === scatterPlotMasterCountry ? 'black' : 'none')
+    .on('mouseover', (event, d) => {
+        tooltip.style('opacity',0.9);
+        const formatComma = d3.format(',');
+        tooltip.html(`<strong>${d.Country} ${d.Flag || ''}</strong><br>${currentXCategory}: ${d[currentXCategory]}<br>${currentYCategory}: ${d[currentYCategory]}<br>Population: ${formatComma(d.Population)}`)
+            .style('left',`${event.pageX+10}px`).style('top',`${event.pageY-20}px`);
+        d3.select(event.currentTarget).raise();
+    })
+    .on('mouseout', () => tooltip.style('opacity',0));
 }
 
 // 4. Radar Chart Functions

@@ -28,6 +28,8 @@ const slides = [
     headline: "Conclusion: <br> What is a “better life”?",
     description: `Our journey through the data shows:<br><br>There is no single “best” country. But there are patterns. The most satisfied societies aren’t always the richest—they’re the most balanced. They value time, trust, health, and freedom.<br><br>Quality of life is multi-dimensional. It’s about balance—not just growth. Data can help us understand, compare, and improve it. So what would you choose in a better life? More time? Better health? A safer community? This dashboard is your tool to explore.`,
   },
+  // Add a virtual slide for the dashboard step
+  { headline: "Dashboard" }
 ];
 
 let current = 0;
@@ -48,14 +50,17 @@ function initCarousel() {
     const dot = document.createElement('div');
     dot.className = 'progress-dot';
     dot.dataset.index = i;
-    dot.addEventListener('click', () => navigateTo(i)); // Make dots clickable
+    dot.addEventListener('click', () => navigateTo(i));
+    // Add special class for the last dot (Dashboard)
+    if (i === slides.length - 1) {
+        dot.classList.add('progress-dot-dashboard');
+    }
     progressContainer.appendChild(dot);
   });
-  // Place indicator before the slide container
   container.before(progressContainer);
 
-  // Clone & populate slides
-  const elems = slides.map((slide, i) => {
+  // Clone & populate slides (exclude the virtual dashboard slide)
+  const elems = slides.slice(0, -1).map((slide, i) => {
     const el = template.cloneNode(true);
     el.querySelector(".headline").innerHTML = slide.headline;
     el.querySelector(".description").innerHTML = slide.description;
@@ -105,7 +110,8 @@ function initCarousel() {
     const prev = el.querySelector(".prev");
     const next = el.querySelector(".next");
     prev.style.visibility = i === 0 ? "hidden" : "visible";
-    next.textContent = i === slides.length - 1 ? "Go to Dashboard →" : "Next →";
+    // The button on the last real slide should now say "Go to Dashboard"
+    next.textContent = i === elems.length - 1 ? "Go to Dashboard →" : "Next →";
     prev.onclick = () => navigate(-1);
     next.onclick = () => navigate(1);
   });
@@ -118,22 +124,19 @@ function initCarousel() {
 
 // Navigate via Prev/Next buttons
 function navigate(dir) {
-  const isLast = current === slides.length - 1;
   const newIndex = current + dir;
-
-  // Special case for last slide's "Next" button
-  if (isLast && dir === 1) {
-    window.location.href = "/dashboard.html";
-    return;
-  }
-  
-  // Navigate to the new index
   navigateTo(newIndex);
 }
 
 // Core function to navigate to a specific slide index
 function navigateTo(index) {
-  if (index < 0 || index >= slides.length || index === current) {
+  // If the target is the last step (the dashboard), redirect.
+  if (index === slides.length - 1) {
+    window.location.href = "/dashboard.html";
+    return;
+  }
+  
+  if (index < 0 || index >= slides.length -1 || index === current) {
     return; // Index is out of bounds or already active
   }
 
@@ -156,9 +159,8 @@ function updateProgress(currentIndex) {
     } else if (i === currentIndex) {
       dot.classList.add('active');
     }
-  });
-  // Add cursor pointer to non-active dots
-  dots.forEach((dot, i) => {
+    
+    // Set cursor style
     if (i !== currentIndex) {
       dot.style.cursor = 'pointer';
     } else {
@@ -168,7 +170,9 @@ function updateProgress(currentIndex) {
 }
 
 function renderSlideContent(idx) {
-  const title = slides[idx].headline;
+  const title = slides[idx]?.headline; // Use optional chaining as slides can be virtual
+  if (!title) return;
+
   if (
     title === "Where are you from?" &&
     !document.querySelector("#member-countries-grid .country-box")

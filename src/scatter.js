@@ -1,88 +1,75 @@
-// src/scatter.js
 import * as d3 from "d3";
-
-// ISO2 codes for flags (including Australia)
-const COUNTRY_CODE = {
-  "Austria":"at","Belgium":"be","Canada":"ca","Chile":"cl","Colombia":"co","Costa Rica":"cr",
-  "Czechia":"cz","Denmark":"dk","Estonia":"ee","Finland":"fi","France":"fr","Germany":"de",
-  "Greece":"gr","Hungary":"hu","Iceland":"is","Ireland":"ie","Israel":"il","Italy":"it",
-  "Japan":"jp","Korea":"kr","Latvia":"lv","Lithuania":"lt","Luxembourg":"lu","Mexico":"mx",
-  "Netherlands":"nl","New Zealand":"nz","Norway":"no","Poland":"pl","Portugal":"pt",
-  "Slovak Republic":"sk","Slovenia":"si","Spain":"es","Sweden":"se","Switzerland":"ch",
-  "Türkiye":"tr","United Kingdom":"gb","United States":"us","Australia":"au"
-};
-function flagUrl(country) {
-  const code = COUNTRY_CODE[country];
-  return code
-    ? `https://GlobalArtInc.github.io/round-flags/flags/${code}.svg`
-    : null;
-}
-
-// region grouping arrays
-const EU = ["Austria","Belgium","Czechia","Denmark","Estonia","Finland",
-  "France","Germany","Greece","Hungary","Iceland","Ireland","Italy","Latvia",
-  "Lithuania","Luxembourg","Netherlands","Norway","Poland","Portugal",
-  "Slovak Republic","Slovenia","Spain","Sweden","Switzerland","Türkiye",
-  "United Kingdom"];
-const AM = ["Canada","Chile","Colombia","Costa Rica","Mexico","United States"];
-const AS = ["Israel","Japan","Korea"];
-const OC = ["Australia","New Zealand"];
-function regionOf(country) {
-  if (EU.includes(country)) return "Europe";
-  if (AM.includes(country)) return "America";
-  if (AS.includes(country)) return "Asia";
-  if (OC.includes(country)) return "Oceania";
-}
 
 export async function drawScatter(containerId) {
   const container = d3.select(`#${containerId}`);
   container.selectAll("*").remove();
 
-  // controls: region dropdown only
-  const controls = container.append("div")
-    .attr("class", "scatter-controls")
-    .style("margin-bottom", "8px")
-    .style("display", "flex")
-    .style("gap", "12px");
-  const regionSelect = controls.append("select").attr("id", "region-select");
-  ["All","Europe","America","Asia","Oceania"].forEach(r => {
-    regionSelect.append("option").attr("value", r).text(r);
-  });
-
   // dimensions
-  const fullW = container.node().clientWidth || 700;
+  const fullW = container.node()?.clientWidth || 700;
   const fullH = 500;
-  const margin = { top: 20, right: 130, bottom: 60, left: 60 };
+  const margin = { top: 20, right: 130, bottom: 60, left: 60 }; // Increased right margin for legend
   const w = fullW - margin.left - margin.right;
   const h = fullH - margin.top - margin.bottom;
 
   // SVG setup
-  const svg = container.append("svg")
+  const svg = container
+    .append("svg")
     .attr("width", fullW)
     .attr("height", fullH)
     .attr("viewBox", `0 0 ${fullW} ${fullH}`);
-  const g = svg.append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // load data
+  // load & parse
   const raw = await d3.csv("/data/2024BetterLife.csv", d3.autoType);
   if (!raw.length) return;
+
+  // detect keys for new comparison
   const headers = Object.keys(raw[0]);
   const xKey = headers.find(k => /gdp per capita/i.test(k));
   const yKey = headers.find(k => /life satisfaction/i.test(k));
   const popKey = headers.find(k => /population/i.test(k));
+
   const data = raw.filter(d => isFinite(d[xKey]) && isFinite(d[yKey]));
 
   // scales
-  const x = d3.scaleLinear()
-    .domain(d3.extent(data, d => d[xKey])).nice()
+  const x = d3
+    .scaleLinear()
+    .domain(d3.extent(data, d => d[xKey]))
+    .nice()
     .range([0, w]);
-  const y = d3.scaleLinear()
-    .domain(d3.extent(data, d => d[yKey])).nice()
+  const y = d3
+    .scaleLinear()
+    .domain(d3.extent(data, d => d[yKey]))
+    .nice()
     .range([h, 0]);
   const rScale = popKey
-    ? d3.scaleSqrt().domain(d3.extent(data, d => d[popKey])).range([8, 32])
-    : () => 16;
+    ? d3.scaleSqrt().domain(d3.extent(data, d => d[popKey])).range([5, 25]) // Increased point size
+    : () => 6;
+
+  // continent palette
+  const palette = {
+    Europe: "#1f77b4",
+    Americas: "#ff7f0e",
+    Asia: "#2ca02c",
+    Oceania: "#d62728"
+  };
+  function regionOf(country) {
+    const eu = [
+      "Austria","Belgium","Czechia","Denmark","Estonia","Finland",
+      "France","Germany","Greece","Hungary","Iceland","Ireland","Italy","Latvia",
+      "Lithuania","Luxembourg","Netherlands","Norway","Poland","Portugal",
+      "Slovak Republic","Slovenia","Spain","Sweden","Switzerland","Türkiye",
+      "United Kingdom"
+    ];
+    const am = ["Canada","Chile","Colombia","Costa Rica","Mexico","United States"];
+    const as = ["Israel","Japan","Korea"];
+    const oc = ["Australia","New Zealand"];
+    if (eu.includes(country)) return "Europe";
+    if (am.includes(country)) return "Americas";
+    if (as.includes(country)) return "Asia";
+    if (oc.includes(country)) return "Oceania";
+    return "Europe";
+  }
 
   // axes
   g.append("g")
@@ -91,83 +78,79 @@ export async function drawScatter(containerId) {
   g.append("g")
     .call(d3.axisLeft(y));
 
-  // axis labels
+  // labels
   g.append("text")
-    .attr("x", w / 2).attr("y", h + 40)
-    .attr("text-anchor", "middle").text("GDP per capita (USD)");
+    .attr("x", w / 2)
+    .attr("y", h + 40)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#000")
+    .text("GDP per capita (USD)");
+
   g.append("text")
     .attr("transform", "rotate(-90)")
-    .attr("x", -h / 2).attr("y", -45)
+    .attr("x", -h / 2)
+    .attr("y", -45)
     .attr("text-anchor", "middle")
-    .text("Life satisfaction (0–10)");
+    .attr("fill", "#000")
+    .text("Life satisfaction (Score 0-10)");
 
   // tooltip
-  const tip = d3.select("body").append("div")
+  let tip = d3.select("body").selectAll(".scatter-tip").data([0]);
+  tip
+    .enter()
+    .append("div")
     .attr("class", "scatter-tip")
     .style("position", "absolute")
     .style("pointer-events", "none")
-    .style("opacity", 0);
+    .style("opacity", 0)
+    .merge(tip);
 
-  // group for flag points
-  const pointsG = g.append("g").attr("class", "points");
+  const fmt = d3.format(",");
+  const scoreFmt = d3.format(".1f");
 
-  // update function
-  function update() {
-    const region = regionSelect.property("value");
-    const filtered = data.filter(d => region === "All" || regionOf(d.Country) === region);
-    const saved = localStorage.getItem("bli-selected-country");
+  // draw points
+  g.selectAll("circle")
+    .data(data, d => d.Country)
+    .join("circle")
+    .attr("cx", d => x(d[xKey]))
+    .attr("cy", d => y(d[yKey]))
+    .attr("r", d => (popKey ? rScale(d[popKey]) : rScale()))
+    .attr("fill", d => palette[regionOf(d.Country)])
+    .attr("opacity", 0.8)
+    .on("mouseover", (e, d) => {
+      d3.select(".scatter-tip")
+        .style("opacity", 1)
+        .html(
+          `<strong>${d.Flag} ${d.Country}</strong><br/>
+           GDP per capita: $${fmt(d[xKey])}<br/>
+           Life Satisfaction: ${scoreFmt(d[yKey])}<br/>
+           Population: ${popKey ? fmt(d[popKey]) : "n/a"}`
+        )
+        .style("left", e.pageX + 10 + "px")
+        .style("top", e.pageY + 10 + "px");
+    })
+    .on("mouseout", () => d3.select(".scatter-tip").style("opacity", 0));
+    
+  // Add Legend
+  const legend = g.append("g")
+    .attr("class", "legend")
+    .attr("transform", `translate(${w + 20}, 0)`); // Positioned to the right
 
-    // data join
-    const groups = pointsG.selectAll("g.flag-group")
-      .data(filtered, d => d.Country);
+  const legendItems = legend.selectAll(".legend-item")
+    .data(Object.entries(palette))
+    .join("g")
+    .attr("class", "legend-item")
+    .attr("transform", (d, i) => `translate(0, ${i * 25})`);
 
-    groups.exit().remove();
+  legendItems.append("rect")
+    .attr("width", 18)
+    .attr("height", 18)
+    .attr("fill", d => d[1]);
 
-    const enter = groups.enter().append("g")
-      .attr("class", "flag-group")
-      .on("mouseover", (e, d) => showTip(e, d))
-      .on("mouseout", () => tip.style("opacity", 0));
-
-    // circle outline
-    enter.append("circle")
-      .attr("class", "flag-circle")
-      .attr("stroke-width", 2)
-      .attr("fill", "none");
-
-    // flag image
-    enter.append("image")
-      .attr("class", "flag-img");
-
-    const all = enter.merge(groups);
-    all.attr("transform", d => `translate(${x(d[xKey])},${y(d[yKey])})`);
-    all.select("circle.flag-circle")
-      .attr("r", d => rScale(d[popKey]))
-      .attr("stroke", d => d.Country === saved ? "#000" : "#666");
-
-    all.select("image.flag-img")
-      .attr("x", d => -rScale(d[popKey]))
-      .attr("y", d => -rScale(d[popKey]))
-      .attr("width", d => rScale(d[popKey]) * 2)
-      .attr("height", d => rScale(d[popKey]) * 2)
-      .attr("href", d => flagUrl(d.Country) || "")
-      .style("opacity", 0.9);
-  }
-
-  function showTip(e, d) {
-    tip.html(
-      `<strong>${d.Country}</strong><br/>
-       GDP: $${d3.format(",")(d[xKey])}<br/>
-       Life sat.: ${d3.format(".1f")(d[yKey])}<br/>
-       Pop.: ${d3.format(",")(d[popKey])}`
-    )
-    .style("left", `${e.pageX + 10}px`)
-    .style("top", `${e.pageY + 10}px`)
-    .transition().duration(100).style("opacity", 0.9);
-  }
-
-  // events
-  regionSelect.on("change", update);
-
-  // initial render
-  update();
+  legendItems.append("text")
+    .attr("x", 24)
+    .attr("y", 14)
+    .text(d => d[0])
+    .style("font-size", "14px")
+    .attr("alignment-baseline", "middle");
 }

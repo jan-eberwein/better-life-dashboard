@@ -358,7 +358,7 @@ html, body {
 /* Main Dashboard Grid Layout */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1.4fr 0.6fr; /* Made left bigger, right smaller */
+    grid-template-columns: 1.3fr 0.7fr; /* Made left bigger, right smaller */
     gap: 2rem;
     min-height: 0;
     aspect-ratio: 20 / 9; /* Less tall overall */
@@ -442,7 +442,7 @@ html, body {
 /* Right Panel - Side Charts */
 .side-charts-panel {
     display: grid;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: 0.8fr 1.2fr;
     gap: 1.5rem;
 }
 

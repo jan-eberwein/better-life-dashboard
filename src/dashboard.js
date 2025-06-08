@@ -427,9 +427,10 @@ function renderRadarChart(selector, data, extents, selectedCountry) {
         .curve(d3.curveLinearClosed);
 
     const byCountryRadar = d3.group(radarPlotData, d => d.country);
+    // ***FARBÄNDERUNG HIER***
     const colorRadar = d3.scaleOrdinal()
         .domain([selectedCountry, 'OECD'])
-        .range([UI_COLORS.primary, UI_COLORS.accent]); // Use primary blue for country, accent blue for OECD
+        .range([UI_COLORS.secondary, UI_COLORS.grayMid]); // Geändert zu Orange für Land, Grau für OECD
 
     for (const [countryName, pts] of byCountryRadar) {
         const ordered = selectedIndicatorsRadar.map(ind => pts.find(p => p.indicator === ind));
@@ -441,7 +442,7 @@ function renderRadarChart(selector, data, extents, selectedCountry) {
             .datum(ordered)
             .attr('d', radarLineGen)
             .attr('fill', colorRadar(countryName))
-            .attr('fill-opacity', 0.25)
+            .attr('fill-opacity', countryName === 'OECD' ? 0.35 : 0.25) // OECD etwas deckender
             .attr('stroke', colorRadar(countryName))
             .attr('stroke-width', 2);
         ordered.forEach((d, i) => {
@@ -459,12 +460,20 @@ function renderRadarChart(selector, data, extents, selectedCountry) {
     }
 
     const legendRadar = svgRadar.append('g')
-        .attr('transform', `translate(${W - 80},${H - 50})`);
-    [selectedCountry, 'OECD'].forEach((c, i) => {
-        const lg = legendRadar.append('g').attr('transform', `translate(0,${18 * i})`);
-        lg.append('line').attr('x1', 0).attr('y1', 8).attr('x2', 20).attr('y2', 8).attr('stroke', colorRadar(c)).attr('stroke-width', 2);
-        lg.append('circle').attr('cx', 10).attr('cy', 8).attr('r', 3).attr('fill', colorRadar(c)).attr('stroke', 'white').attr('stroke-width', 1);
-        lg.append('text').attr('x', 25).attr('y', 8).attr('dy', '0.35em').style('font-size', '10px').style('font-weight', '500').text(c);
+        .attr('transform', `translate(${W - 90},${H - 50})`);
+
+    // ***LEGENDEN-ÄNDERUNG HIER***
+    const legendData = [
+        { name: selectedCountry, key: selectedCountry },
+        { name: 'OECD Average', key: 'OECD' }
+    ];
+
+    legendData.forEach((item, i) => {
+        const color = colorRadar(item.key);
+        const lg = legendRadar.append('g').attr('transform', `translate(0, ${18 * i})`);
+        lg.append('line').attr('x1', 0).attr('y1', 8).attr('x2', 20).attr('y2', 8).attr('stroke', color).attr('stroke-width', 2);
+        lg.append('circle').attr('cx', 10).attr('cy', 8).attr('r', 3).attr('fill', color).attr('stroke', 'white').attr('stroke-width', 1);
+        lg.append('text').attr('x', 25).attr('y', 8).attr('dy', '0.35em').style('font-size', '10px').style('font-weight', '500').text(item.name);
     });
 }
 

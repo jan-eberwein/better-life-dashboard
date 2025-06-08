@@ -701,3 +701,11 @@ html, body {
         min-height: 250px;
     }
 }
+
+#bar-chart {
+    min-height: 350px; /* Ensure enough height */
+}
+
+.bar-tooltip {
+    font-family: 'Raleway', sans-serif;
+}

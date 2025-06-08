@@ -468,7 +468,7 @@ function renderRadarChart(selector, data, extents, selectedCountry) {
     });
 }
 
-// 5. Bar Chart Functions (IMPROVED VERSION)
+// 5. Improved Bar Chart Functions
 function setupBarChartSVG(selector) {
     const container = d3.select(selector);
     if (container.empty()) {
@@ -516,8 +516,17 @@ function renderBarChart() {
 
     if (entries.length === 0) return;
 
-    const W = 350, H = 280;
-    const margin = { top: 20, right: 20, bottom: 50, left: 60 };
+    // Improved dimensions and margins
+    const containerRect = container.node().getBoundingClientRect();
+    const W = Math.max(350, containerRect.width);
+    const H = Math.max(300, containerRect.height);
+
+    // Adjust margins based on data length and continent mode
+    const isVertical = continentMode || entries.length <= 8;
+    const margin = isVertical
+        ? { top: 20, right: 20, bottom: 80, left: 60 } // More bottom margin for rotated labels
+        : { top: 30, right: 20, bottom: 20, left: Math.max(120, d3.max(entries, d => d.key.length) * 8) }; // Dynamic left margin
+
     const drawingWidth = W - margin.left - margin.right;
     const drawingHeight = H - margin.top - margin.bottom;
     const maxValue = d3.max(entries, d => d.value);
@@ -525,121 +534,257 @@ function renderBarChart() {
     if (maxValue === undefined) return;
 
     const svg = container.append('svg')
-        .attr('viewBox', `0 0 ${W} ${H}`)
-        .style('width', '100%').style('height', '100%')
-        .style('background', '#fdfdfd').style('border-radius', '8px');
+        .attr('width', W)
+        .attr('height', H)
+        .style('background', '#fdfdfd')
+        .style('border-radius', '8px');
 
     const g = svg.append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
 
-    const vertical = continentMode || ['Top 3', 'Top 5'].includes(numVal);
-
-    // Tooltip for bar chart
+    // Enhanced tooltip
     let barTooltip = d3.select('body').select('.bar-tooltip');
     if (barTooltip.empty()) {
         barTooltip = d3.select('body').append('div').attr('class','bar-tooltip')
-            .style('position','absolute').style('background','rgba(255,255,255,0.96)').style('padding','8px 12px')
-            .style('border','1px solid #ddd').style('border-radius','6px').style('pointer-events','none')
-            .style('opacity',0).style('font-size','12px').style('box-shadow','0 4px 12px rgba(0,0,0,0.15)').style('white-space','nowrap').style('z-index','1050');
+            .style('position','absolute')
+            .style('background','rgba(255,255,255,0.98)')
+            .style('padding','12px 16px')
+            .style('border','1px solid #ddd')
+            .style('border-radius','8px')
+            .style('pointer-events','none')
+            .style('opacity',0)
+            .style('font-size','13px')
+            .style('font-weight','500')
+            .style('box-shadow','0 4px 20px rgba(0,0,0,0.15)')
+            .style('white-space','nowrap')
+            .style('z-index','1050');
     }
 
-    if (vertical) {
-        const xBand = d3.scaleBand().domain(entries.map(d => d.key)).range([0, drawingWidth]).padding(0.15);
-        const yLin = d3.scaleLinear().domain([0, maxValue]).nice().range([drawingHeight, 0]);
+    if (isVertical) {
+        // Vertical bars (better for fewer items)
+        const xBand = d3.scaleBand()
+            .domain(entries.map(d => d.key))
+            .range([0, drawingWidth])
+            .padding(0.2); // Increased padding for better spacing
 
-        g.append('g').attr('transform', `translate(0,${drawingHeight})`).call(d3.axisBottom(xBand))
-            .selectAll("text")
+        const yLin = d3.scaleLinear()
+            .domain([0, maxValue])
+            .nice()
+            .range([drawingHeight, 0]);
+
+        // X-axis with improved label handling
+        const xAxis = g.append('g')
+            .attr('transform', `translate(0,${drawingHeight})`)
+            .call(d3.axisBottom(xBand));
+
+        // Improve x-axis labels
+        xAxis.selectAll("text")
             .style("text-anchor", "end")
-            .style("font-size", "9px")
+            .style("font-size", "10px")
             .style("font-weight", "500")
-            .attr("dx", "-.8em").attr("dy", ".15em")
-            .attr("transform", "rotate(-45)");
-        g.append('g').call(d3.axisLeft(yLin).tickFormat(d3.format('.1s')))
-            .selectAll("text")
-            .style("font-size", "9px")
-            .style("font-weight", "500");
+            .style("fill", "#555")
+            .attr("dx", "-.8em")
+            .attr("dy", ".15em")
+            .attr("transform", "rotate(-45)")
+            .each(function(d) {
+                // Truncate long labels
+                if (d.length > 12) {
+                    d3.select(this).text(d.substring(0, 12) + '...');
+                }
+            });
 
-        g.selectAll('rect.bar-rect')
-            .data(entries).join('rect').attr('class', 'bar-rect')
+        // Y-axis
+        g.append('g')
+            .call(d3.axisLeft(yLin).tickFormat(d3.format('.1s')))
+            .selectAll("text")
+            .style("font-size", "10px")
+            .style("font-weight", "500")
+            .style("fill", "#555");
+
+        // Bars with animation
+        const bars = g.selectAll('rect.bar-rect')
+            .data(entries)
+            .join('rect')
+            .attr('class', 'bar-rect')
             .attr('x', d => xBand(d.key))
             .attr('width', xBand.bandwidth())
+            .attr('y', drawingHeight) // Start from bottom for animation
+            .attr('height', 0) // Start with 0 height
+            .attr('fill', d => getBarColor(d, continentMode))
+            .attr('opacity', d => getBarOpacity(d, continentMode))
+            .attr('rx', 3)
+            .attr('stroke', d => getBarStroke(d, continentMode))
+            .attr('stroke-width', d => getBarStrokeWidth(d, continentMode));
+
+        // Animate bars
+        bars.transition()
+            .duration(750)
+            .ease(d3.easeBackOut)
             .attr('y', d => yLin(d.value))
-            .attr('height', d => drawingHeight - yLin(d.value))
-            .attr('fill', d => {
-                if (continentMode) {
-                    // Use bright continent colors for continent mode
-                    return BAR_CHART_COLORS.continent[d.key] || BAR_CHART_COLORS.default;
-                } else {
-                    // For individual countries, use continent-based bright colors
-                    const continent = regionOf(d.key);
-                    return BAR_CHART_COLORS.continent[continent] || BAR_CHART_COLORS.default;
-                }
-            })
-            .attr('opacity', d => {
-                // Apply opacity based on selection
-                if (continentMode) {
-                    // Get the continent of the selected country
-                    const selectedContinent = scatterPlotMasterCountry ? regionOf(scatterPlotMasterCountry) : null;
-                    return d.key === selectedContinent ? 0.9 : 0.5;
-                } else {
-                    return d.key === scatterPlotMasterCountry ? 0.9 : 0.5; // Country mode with highlighting
-                }
-            })
-            .attr('rx', 2)
-            .on('mouseover', (event, d) => {
-                barTooltip.style('opacity', 0.95);
-                barTooltip.html(`<strong>${d.key}</strong><br/>${prop}: ${d.value.toFixed(2)}`)
-                    .style('left', `${event.pageX + 12}px`)
-                    .style('top', `${event.pageY - 10}px`);
-            })
-            .on('mouseout', () => barTooltip.style('opacity', 0));
+            .attr('height', d => drawingHeight - yLin(d.value));
+
+        // Add value labels on top of bars
+        g.selectAll('text.bar-label')
+            .data(entries)
+            .join('text')
+            .attr('class', 'bar-label')
+            .attr('x', d => xBand(d.key) + xBand.bandwidth() / 2)
+            .attr('y', d => yLin(d.value) - 5)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '9px')
+            .style('font-weight', '600')
+            .style('fill', '#333')
+            .style('opacity', 0)
+            .text(d => d.value.toFixed(1))
+            .transition()
+            .delay(750)
+            .duration(300)
+            .style('opacity', 0.8);
+
     } else {
-        const xLin = d3.scaleLinear().domain([0, maxValue]).nice().range([0, drawingWidth]);
-        const yBand = d3.scaleBand().domain(entries.map(d => d.key)).range([0, drawingHeight]).padding(0.15);
+        // Horizontal bars (better for many items)
+        const xLin = d3.scaleLinear()
+            .domain([0, maxValue])
+            .nice()
+            .range([0, drawingWidth]);
 
-        g.append('g').call(d3.axisLeft(yBand))
-            .selectAll("text")
-            .style("font-size", "9px")
-            .style("font-weight", "500");
-        g.append('g').call(d3.axisTop(xLin).tickFormat(d3.format('.1s')))
-            .selectAll("text")
-            .style("font-size", "9px")
-            .style("font-weight", "500");
+        const yBand = d3.scaleBand()
+            .domain(entries.map(d => d.key))
+            .range([0, drawingHeight])
+            .padding(0.15);
 
-        g.selectAll('rect.bar-rect')
-            .data(entries).join('rect').attr('class', 'bar-rect')
+        // Y-axis with improved label handling
+        const yAxis = g.append('g')
+            .call(d3.axisLeft(yBand));
+
+        yAxis.selectAll("text")
+            .style("font-size", "9px")
+            .style("font-weight", "500")
+            .style("fill", "#555")
+            .each(function(d) {
+                // Truncate very long country names
+                if (d.length > 15) {
+                    d3.select(this).text(d.substring(0, 15) + '...');
+                }
+            });
+
+        // X-axis
+        g.append('g')
+            .call(d3.axisTop(xLin).tickFormat(d3.format('.1s')))
+            .selectAll("text")
+            .style("font-size", "10px")
+            .style("font-weight", "500")
+            .style("fill", "#555");
+
+        // Bars with animation
+        const bars = g.selectAll('rect.bar-rect')
+            .data(entries)
+            .join('rect')
+            .attr('class', 'bar-rect')
             .attr('y', d => yBand(d.key))
             .attr('height', yBand.bandwidth())
             .attr('x', 0)
-            .attr('width', d => xLin(d.value))
-            .attr('fill', d => {
-                if (continentMode) {
-                    // Use bright continent colors for continent mode
-                    return BAR_CHART_COLORS.continent[d.key] || BAR_CHART_COLORS.default;
-                } else {
-                    // For individual countries, use continent-based bright colors
-                    const continent = regionOf(d.key);
-                    return BAR_CHART_COLORS.continent[continent] || BAR_CHART_COLORS.default;
-                }
-            })
-            .attr('opacity', d => {
-                // Apply opacity based on selection
-                if (continentMode) {
-                    // Get the continent of the selected country
-                    const selectedContinent = scatterPlotMasterCountry ? regionOf(scatterPlotMasterCountry) : null;
-                    return d.key === selectedContinent ? 0.9 : 0.5;
-                } else {
-                    return d.key === scatterPlotMasterCountry ? 0.9 : 0.5; // Country mode with highlighting
-                }
-            })
-            .attr('rx', 2)
-            .on('mouseover', (event, d) => {
-                barTooltip.style('opacity', 0.95);
-                barTooltip.html(`<strong>${d.key}</strong><br/>${prop}: ${d.value.toFixed(2)}`)
-                    .style('left', `${event.pageX + 12}px`)
-                    .style('top', `${event.pageY - 10}px`);
-            })
-            .on('mouseout', () => barTooltip.style('opacity', 0));
+            .attr('width', 0) // Start with 0 width
+            .attr('fill', d => getBarColor(d, continentMode))
+            .attr('opacity', d => getBarOpacity(d, continentMode))
+            .attr('rx', 3)
+            .attr('stroke', d => getBarStroke(d, continentMode))
+            .attr('stroke-width', d => getBarStrokeWidth(d, continentMode));
+
+        // Animate bars
+        bars.transition()
+            .duration(750)
+            .ease(d3.easeBackOut)
+            .attr('width', d => xLin(d.value));
+
+        // Add value labels at end of bars
+        g.selectAll('text.bar-label')
+            .data(entries)
+            .join('text')
+            .attr('class', 'bar-label')
+            .attr('x', d => xLin(d.value) + 5)
+            .attr('y', d => yBand(d.key) + yBand.bandwidth() / 2)
+            .attr('dy', '0.35em')
+            .style('font-size', '9px')
+            .style('font-weight', '600')
+            .style('fill', '#333')
+            .style('opacity', 0)
+            .text(d => d.value.toFixed(1))
+            .transition()
+            .delay(750)
+            .duration(300)
+            .style('opacity', 0.8);
+    }
+
+    // Enhanced hover interactions
+    g.selectAll('rect.bar-rect')
+        .on('mouseover', function(event, d) {
+            // Highlight effect
+            d3.select(this)
+                .transition()
+                .duration(150)
+                .attr('opacity', 1)
+                .attr('stroke-width', 2);
+
+            // Show tooltip
+            barTooltip.style('opacity', 0.95);
+            const displayValue = d.value.toFixed(2);
+            const tooltipText = continentMode
+                ? `<strong>${d.key}</strong><br/>${prop}: ${displayValue} (avg)`
+                : `<strong>${d.key}</strong><br/>${prop}: ${displayValue}`;
+
+            barTooltip.html(tooltipText)
+                .style('left', `${event.pageX + 12}px`)
+                .style('top', `${event.pageY - 10}px`);
+        })
+        .on('mouseout', function(event, d) {
+            // Remove highlight
+            d3.select(this)
+                .transition()
+                .duration(150)
+                .attr('opacity', d => getBarOpacity(d, continentMode))
+                .attr('stroke-width', d => getBarStrokeWidth(d, continentMode));
+
+            // Hide tooltip
+            barTooltip.style('opacity', 0);
+        })
+        .style('cursor', 'pointer');
+}
+
+// Helper functions for bar styling
+function getBarColor(d, continentMode) {
+    if (continentMode) {
+        return BAR_CHART_COLORS.continent[d.key] || BAR_CHART_COLORS.default;
+    } else {
+        const continent = regionOf(d.key);
+        return BAR_CHART_COLORS.continent[continent] || BAR_CHART_COLORS.default;
+    }
+}
+
+function getBarOpacity(d, continentMode) {
+    if (continentMode) {
+        const selectedContinent = scatterPlotMasterCountry ? regionOf(scatterPlotMasterCountry) : null;
+        return d.key === selectedContinent ? 0.9 : 0.6;
+    } else {
+        return d.key === scatterPlotMasterCountry ? 0.9 : 0.6;
+    }
+}
+
+function getBarStroke(d, continentMode) {
+    if (continentMode) {
+        const selectedContinent = scatterPlotMasterCountry ? regionOf(scatterPlotMasterCountry) : null;
+        return d.key === selectedContinent ? BAR_CHART_COLORS.selectedStroke : 'none';
+    } else {
+        return d.key === scatterPlotMasterCountry ? BAR_CHART_COLORS.selectedStroke : 'none';
+    }
+}
+
+function getBarStrokeWidth(d, continentMode) {
+    if (continentMode) {
+        const selectedContinent = scatterPlotMasterCountry ? regionOf(scatterPlotMasterCountry) : null;
+        return d.key === selectedContinent ? 2 : 0;
+    } else {
+        return d.key === scatterPlotMasterCountry ? 2 : 0;
     }
 }
 

@@ -576,9 +576,11 @@ function renderBarChart() {
                 }
             })
             .attr('opacity', d => {
-                // Always apply opacity for consistency with scatter plot
+                // Apply opacity based on selection
                 if (continentMode) {
-                    return 0.9; // All continent bars get same opacity as scatter plot
+                    // Get the continent of the selected country
+                    const selectedContinent = scatterPlotMasterCountry ? regionOf(scatterPlotMasterCountry) : null;
+                    return d.key === selectedContinent ? 0.9 : 0.5;
                 } else {
                     return d.key === scatterPlotMasterCountry ? 0.9 : 0.5; // Country mode with highlighting
                 }
@@ -621,9 +623,11 @@ function renderBarChart() {
                 }
             })
             .attr('opacity', d => {
-                // Always apply opacity for consistency with scatter plot
+                // Apply opacity based on selection
                 if (continentMode) {
-                    return 0.9; // All continent bars get same opacity as scatter plot
+                    // Get the continent of the selected country
+                    const selectedContinent = scatterPlotMasterCountry ? regionOf(scatterPlotMasterCountry) : null;
+                    return d.key === selectedContinent ? 0.9 : 0.5;
                 } else {
                     return d.key === scatterPlotMasterCountry ? 0.9 : 0.5; // Country mode with highlighting
                 }

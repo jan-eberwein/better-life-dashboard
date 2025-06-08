@@ -226,11 +226,11 @@ export async function drawMap(containerId, options) {
   const colorScale = d3.scaleSequential(d3.interpolateRdYlGn)
     .domain([d3.min(data, d => d["Life satisfaction"]), d3.max(data, d => d["Life satisfaction"])]);
 
-  // Draw countries
+// Draw countries
   const g = svg.append("g");
   g.selectAll("path.country")
-    .data(worldGeo.features)
-    .enter().append("path")
+      .data(worldGeo.features)
+      .enter().append("path")
       .attr("class", "country")
       .attr("d", path)
       .attr("fill", feat => {
@@ -257,6 +257,95 @@ export async function drawMap(containerId, options) {
           }
         }
       });
+
+  // Add color legend for life satisfaction
+  const legendGroup = svg.append("g")
+      .attr("transform", `translate(${width - 200}, ${height - 80})`);
+
+  // Legend background
+  legendGroup.append("rect")
+      .attr("x", -10)
+      .attr("y", -10)
+      .attr("width", 180)
+      .attr("height", 70)
+      .attr("fill", "rgba(255,255,255,0.9)")
+      .attr("stroke", "#ccc")
+      .attr("stroke-width", 1)
+      .attr("rx", 4);
+
+  // Legend title
+  legendGroup.append("text")
+      .attr("x", 85)
+      .attr("y", 8)
+      .attr("text-anchor", "middle")
+      .style("font-weight", "bold")
+      .style("font-size", "12px")
+      .style("fill", "#333")
+      .text("Life Satisfaction");
+
+  // Create gradient for legend
+  const defs = svg.append("defs");
+  const gradient = defs.append("linearGradient")
+      .attr("id", "legend-gradient")
+      .attr("x1", "0%")
+      .attr("x2", "100%")
+      .attr("y1", "0%")
+      .attr("y2", "0%");
+
+  const satisfactionExtent = d3.extent(data, d => d["Life satisfaction"]);
+  const legendSteps = 10;
+  for (let i = 0; i <= legendSteps; i++) {
+    const value = satisfactionExtent[0] + (satisfactionExtent[1] - satisfactionExtent[0]) * (i / legendSteps);
+    gradient.append("stop")
+        .attr("offset", `${(i / legendSteps) * 100}%`)
+        .attr("stop-color", colorScale(value));
+  }
+
+  // Legend color bar
+  const legendWidth = 140;
+  const legendHeight = 15;
+  legendGroup.append("rect")
+      .attr("x", 15)
+      .attr("y", 15)
+      .attr("width", legendWidth)
+      .attr("height", legendHeight)
+      .style("fill", "url(#legend-gradient)")
+      .attr("stroke", "#999")
+      .attr("stroke-width", 0.5);
+
+  // Legend scale
+  const legendScale = d3.scaleLinear()
+      .domain(satisfactionExtent)
+      .range([15, 15 + legendWidth]);
+
+  const legendAxis = d3.axisBottom(legendScale)
+      .ticks(4)
+      .tickSize(3)
+      .tickFormat(d => d.toFixed(1));
+
+  legendGroup.append("g")
+      .attr("transform", `translate(0, ${15 + legendHeight})`)
+      .call(legendAxis)
+      .selectAll("text")
+      .style("font-size", "10px")
+      .style("fill", "#666");
+
+  // No data indicator
+  legendGroup.append("rect")
+      .attr("x", 15)
+      .attr("y", 45)
+      .attr("width", 12)
+      .attr("height", 12)
+      .attr("fill", "#eee")
+      .attr("stroke", "#999")
+      .attr("stroke-width", 0.5);
+
+  legendGroup.append("text")
+      .attr("x", 32)
+      .attr("y", 55)
+      .style("font-size", "10px")
+      .style("fill", "#666")
+      .text("No data");
 
   // Zoom behavior
   const zoom = d3.zoom()

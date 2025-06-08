@@ -45,12 +45,39 @@ let scatterPlotMasterCountry = null;
 let currentXCategory = 'GDP per capita (USD)';
 let currentYCategory = 'Life satisfaction';
 let shouldScaleByPopulation = false;
-// Removed shouldColorByContinent - always use continent colors
 
 // --- Bar Chart Config & Globals ---
 let barSvg;
 let barG;
 let numericKeys = [];
+
+// --- Color Palette from UI Design ---
+const UI_COLORS = {
+    primary: "#005B96",      // primary blue
+    accent: "#74B3CE",       // accent blue
+    grayDark: "#444444",     // gray-dark
+    grayMid: "#888888",      // gray-mid
+    grayLight: "#E0E0E0",    // gray-light
+    white: "#FFFFFF",        // white
+    secondary: "#F5A623"     // secondary orange
+};
+
+// --- Bar Chart Color Configuration ---
+const BAR_CHART_COLORS = {
+    default: UI_COLORS.primary,           // Use primary blue for all bars
+    selected: UI_COLORS.secondary,        // Use secondary orange for selected country
+    selectedStroke: UI_COLORS.grayDark,   // Dark border for selected country
+    continent: continentPalette,          // Use continent colors when in continent mode
+    // Duller continent colors for bar chart using UI palette
+    continentDull: {
+        Europe: UI_COLORS.accent,         // Accent blue for Europe
+        Americas: "#D4A574",              // Muted orange for Americas
+        Asia: "#7BA05B",                  // Muted green for Asia
+        Oceania: "#C97064",               // Muted red for Oceania
+        Africa: "#9B7CB6",                // Muted purple for Africa
+        Other: UI_COLORS.grayMid          // Gray-mid for others
+    }
+};
 
 // --- Radar Chart Globals ---
 let radarSvg;
@@ -107,7 +134,6 @@ d3.csv('/data/2024BetterLife.csv', d3.autoType).then(raw => {
     const xAxisSelect = document.getElementById('x-axis-select');
     const yAxisSelect = document.getElementById('y-axis-select');
     const scalePopCheckbox = document.getElementById('scale-population-checkbox');
-    // Removed colorByContinentCheckbox
     numericKeys = Object.keys(raw[0]).filter(k => k !== 'Country' && k !== 'Flag' && k !== 'Population' && typeof raw[0][k] === 'number');
     if (xAxisSelect && yAxisSelect) {
         for (const k of numericKeys) {
@@ -150,12 +176,12 @@ d3.csv('/data/2024BetterLife.csv', d3.autoType).then(raw => {
     if (xAxisSelect) xAxisSelect.onchange = () => { currentXCategory = xAxisSelect.value; renderScatterPlot(); };
     if (yAxisSelect) yAxisSelect.onchange = () => { currentYCategory = yAxisSelect.value; renderScatterPlot(); };
     if (scalePopCheckbox) scalePopCheckbox.onchange = () => { shouldScaleByPopulation = scalePopCheckbox.checked; renderScatterPlot(); };
-    // Removed colorByContinentCheckbox event listener
     if (countrySelect) countrySelect.onchange = () => {
         scatterPlotMasterCountry = countrySelect.value;
         localStorage.setItem('bli-selected-country', scatterPlotMasterCountry);
         renderScatterPlot();
         if (scatterPlotMasterCountry) renderRadarChart('#chart', radarChartLongData, extentByIndicatorRadar, scatterPlotMasterCountry);
+        renderBarChart(); // Re-render bar chart to update highlighting
     };
     if (propertySelect) propertySelect.onchange = () => { renderBarChart(); };
     if (numSelect) numSelect.onchange = () => { renderBarChart(); };
@@ -403,7 +429,7 @@ function renderRadarChart(selector, data, extents, selectedCountry) {
     const byCountryRadar = d3.group(radarPlotData, d => d.country);
     const colorRadar = d3.scaleOrdinal()
         .domain([selectedCountry, 'OECD'])
-        .range(['#e41a1c', '#4daf4a']);
+        .range([UI_COLORS.primary, UI_COLORS.accent]); // Use primary blue for country, accent blue for OECD
 
     for (const [countryName, pts] of byCountryRadar) {
         const ordered = selectedIndicatorsRadar.map(ind => pts.find(p => p.indicator === ind));
@@ -442,7 +468,7 @@ function renderRadarChart(selector, data, extents, selectedCountry) {
     });
 }
 
-// 5. Bar Chart Functions
+// 5. Bar Chart Functions (IMPROVED VERSION)
 function setupBarChartSVG(selector) {
     const container = d3.select(selector);
     if (container.empty()) {
@@ -508,6 +534,15 @@ function renderBarChart() {
 
     const vertical = continentMode || ['Top 3', 'Top 5'].includes(numVal);
 
+    // Tooltip for bar chart
+    let barTooltip = d3.select('body').select('.bar-tooltip');
+    if (barTooltip.empty()) {
+        barTooltip = d3.select('body').append('div').attr('class','bar-tooltip')
+            .style('position','absolute').style('background','rgba(255,255,255,0.96)').style('padding','8px 12px')
+            .style('border','1px solid #ddd').style('border-radius','6px').style('pointer-events','none')
+            .style('opacity',0).style('font-size','12px').style('box-shadow','0 4px 12px rgba(0,0,0,0.15)').style('white-space','nowrap').style('z-index','1050');
+    }
+
     if (vertical) {
         const xBand = d3.scaleBand().domain(entries.map(d => d.key)).range([0, drawingWidth]).padding(0.15);
         const yLin = d3.scaleLinear().domain([0, maxValue]).nice().range([drawingHeight, 0]);
@@ -530,8 +565,35 @@ function renderBarChart() {
             .attr('width', xBand.bandwidth())
             .attr('y', d => yLin(d.value))
             .attr('height', d => drawingHeight - yLin(d.value))
-            .attr('fill', '#5b9bd5')
-            .attr('rx', 2);
+            .attr('fill', d => {
+                if (continentMode) {
+                    // Use the SAME bright continent colors as the scatter plot legend
+                    return BAR_CHART_COLORS.continent[d.key] || BAR_CHART_COLORS.default;
+                } else {
+                    // Highlight selected country
+                    return d.key === scatterPlotMasterCountry ? BAR_CHART_COLORS.selected : BAR_CHART_COLORS.default;
+                }
+            })
+            .attr('stroke', d => {
+                if (!continentMode && d.key === scatterPlotMasterCountry) {
+                    return BAR_CHART_COLORS.selectedStroke;
+                }
+                return 'none';
+            })
+            .attr('stroke-width', d => {
+                if (!continentMode && d.key === scatterPlotMasterCountry) {
+                    return 2;
+                }
+                return 0;
+            })
+            .attr('rx', 2)
+            .on('mouseover', (event, d) => {
+                barTooltip.style('opacity', 0.95);
+                barTooltip.html(`<strong>${d.key}</strong><br/>${prop}: ${d.value.toFixed(2)}`)
+                    .style('left', `${event.pageX + 12}px`)
+                    .style('top', `${event.pageY - 10}px`);
+            })
+            .on('mouseout', () => barTooltip.style('opacity', 0));
     } else {
         const xLin = d3.scaleLinear().domain([0, maxValue]).nice().range([0, drawingWidth]);
         const yBand = d3.scaleBand().domain(entries.map(d => d.key)).range([0, drawingHeight]).padding(0.15);
@@ -551,8 +613,35 @@ function renderBarChart() {
             .attr('height', yBand.bandwidth())
             .attr('x', 0)
             .attr('width', d => xLin(d.value))
-            .attr('fill', '#70ad47')
-            .attr('rx', 2);
+            .attr('fill', d => {
+                if (continentMode) {
+                    // Use the SAME bright continent colors as the scatter plot legend
+                    return BAR_CHART_COLORS.continent[d.key] || BAR_CHART_COLORS.default;
+                } else {
+                    // Highlight selected country
+                    return d.key === scatterPlotMasterCountry ? BAR_CHART_COLORS.selected : BAR_CHART_COLORS.default;
+                }
+            })
+            .attr('stroke', d => {
+                if (!continentMode && d.key === scatterPlotMasterCountry) {
+                    return BAR_CHART_COLORS.selectedStroke;
+                }
+                return 'none';
+            })
+            .attr('stroke-width', d => {
+                if (!continentMode && d.key === scatterPlotMasterCountry) {
+                    return 2;
+                }
+                return 0;
+            })
+            .attr('rx', 2)
+            .on('mouseover', (event, d) => {
+                barTooltip.style('opacity', 0.95);
+                barTooltip.html(`<strong>${d.key}</strong><br/>${prop}: ${d.value.toFixed(2)}`)
+                    .style('left', `${event.pageX + 12}px`)
+                    .style('top', `${event.pageY - 10}px`);
+            })
+            .on('mouseout', () => barTooltip.style('opacity', 0));
     }
 }
 

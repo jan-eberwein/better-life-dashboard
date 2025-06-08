@@ -1,5 +1,5 @@
 /*───────────────────────────────────────────────────────────────
-  OECD Better Life Index 2024 ‑ Global Styles
+  OECD Better Life Index 2024 ‑ Global Styles
 ────────────────────────────────────────────────────────────────*/
 
 /* 1 ▸ LOCAL VARIABLE FONTS (TTF)
@@ -22,9 +22,17 @@
 /* 2 ▸ ROOT & RESET
    ───────────────────────────────*/
 :root {
-    --color-gray-dark: #444;
-    --color-primary:    #005B96;
-    --color-white:      #fff;
+    /* UI Color Palette */
+    --color-primary:    #005B96;  /* primary blue */
+    --color-accent:     #74B3CE;  /* accent blue */
+    --color-gray-dark:  #444444;  /* gray-dark */
+    --color-gray-mid:   #888888;  /* gray-mid */
+    --color-gray-light: #E0E0E0;  /* gray-light */
+    --color-white:      #FFFFFF;  /* white */
+    --color-secondary:  #F5A623;  /* secondary orange */
+
+    /* Legacy variables for backward compatibility */
+    --color-gray-dark: var(--color-gray-dark);
 }
 * { box-sizing: border-box; }
 html, body {
@@ -64,14 +72,16 @@ html, body {
     font-size: 2.5rem;
     font-weight: 900;
     margin: 0 0 0.335em 0;                          /* paragraph gap halved */
+    color: var(--color-gray-dark);
 }
 .description {
     font-size: 1rem;
     line-height: 1.5;
+    color: var(--color-gray-dark);
 }
 
-/* Doubling ONLY subtitle → headline spacing on first slide (If applicable) */
-.slide:first-child .headline { margin-top: 0.75rem; }  /* + 0.75 rem → 1.5 rem total */
+/* Doubling ONLY subtitle → headline spacing on first slide (If applicable) */
+.slide:first-child .headline { margin-top: 0.75rem; }  /* + 0.75 rem → 1.5 rem total */
 
 /* Responsive type */
 @media (max-width: 600px) {
@@ -123,12 +133,14 @@ html, body {
     font-size: 1rem;
     cursor: pointer;
     transition: background .2s, color .2s;
+    color: var(--color-gray-dark);
 }
 .nav-btn:hover {
     background: var(--color-primary);
     color: var(--color-white);
+    border-color: var(--color-primary);
 }
-.slide:first-child .prev { visibility: hidden; }  /* hide “Prev” on slide 0 (If applicable) */
+.slide:first-child .prev { visibility: hidden; }  /* hide "Prev" on slide 0 (If applicable) */
 
 /* 9 ▸ TOOLTIPS
    ───────────────────────────────*/
@@ -136,14 +148,14 @@ html, body {
 #map-tooltip {
     position: absolute;
     pointer-events: none;
-    background: #fff; /* From file 2, more explicit */
-    border: 1px solid #ccc;
-    padding: 0.5rem; /* From file 2 */
-    font-size: 0.85rem; /* From file 2 */
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-light);
+    padding: 0.5rem;
+    font-size: 0.85rem;
     border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0,0,0,.15); /* From file 2 */
+    box-shadow: 0 2px 6px rgba(0,0,0,.15);
     z-index: 1000;
-    white-space: nowrap; /* Ensure it doesn't wrap, common for tooltips */
+    white-space: nowrap;
 }
 
 .tooltip-legend ul {
@@ -156,83 +168,73 @@ html, body {
 .scatter-tip {
     background: rgba(255, 255, 255, 0.95);
     padding: 6px 10px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-gray-light);
     border-radius: 4px;
     font-size: 11px;
     position: absolute;
     pointer-events: none;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     white-space: nowrap;
-    z-index: 1000; /* Ensure it's above other elements */
+    z-index: 1000;
 }
 
 /* Tooltip for story scatter (If applicable, could be a specific variant) */
 .scatter-tooltip-story {
-    font-family: Raleway, sans-serif; /* Explicit font for this one if needed */
-    /* Other styles could be inherited from .scatter-tip or defined here */
+    font-family: Raleway, sans-serif;
 }
 
-/* The .scatter-tooltip-external is styled inline in the JS for the main dashboard scatter plot */
-
+/* ── DASHBOARD SPECIFIC STYLES ────────────────────────────────── */
+.dashboard-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 1rem;
+}
 
 /* Control Panel for Dashboard */
 .control-panel {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem; /* Space between control groups */
-    margin-bottom: 1.5rem; /* Space below the whole panel */
+    gap: 1rem;
+    margin-bottom: 1.5rem;
     padding: 10px;
-    background-color: #f0f0f0; /* Light background for the panel */
+    background-color: #f8f9fa;
     border-radius: 4px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-gray-light);
 }
-.control-panel > div { /* Direct children of control-panel (individual control groups) */
+.control-panel > div {
     display: flex;
-    flex-direction: column; /* Stack label and select/input */
+    flex-direction: column;
     gap: 0.25rem;
 }
 
-/* Styles for specific control groups if needed (or use classes on the divs in HTML) */
-.scatter-plot-controls,
-.bar-chart-controls { /* Re-using existing HTML classes for consistency */
-    /* These are already styled inline in the HTML, but you could centralize here */
-    /* Example: */
-    /* margin-bottom: 20px; */
-    /* padding: 10px; */
-    /* background-color: #f0f0f0; */
-    /* border-radius: 4px; */
-    /* border: 1px solid #ddd; */
-}
-
 .control-panel label {
-    display: block; /* Make label take full width of its container */
+    display: block;
     margin-bottom: 0.25rem;
     font-size: 0.9rem;
     font-weight: 600;
+    color: var(--color-gray-dark);
 }
 .control-panel select,
 .control-panel input[type="checkbox"] {
-    font-size: 0.9rem; /* Slightly smaller font for controls */
+    font-size: 0.9rem;
     padding: 0.25rem 0.4rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-gray-light);
     border-radius: 3px;
 }
 .control-panel input[type="checkbox"] {
-    padding: 0; /* Remove default padding for checkboxes */
+    padding: 0;
     margin-right: 0.3em;
     vertical-align: middle;
 }
-.control-panel label[for*="checkbox"] { /* Labels associated with checkboxes */
+.control-panel label[for*="checkbox"] {
     font-weight: normal;
     vertical-align: middle;
 }
 
-
 /* ── Bar Chart Section Specifics ──────────────────────────────── */
 #bar-chart {
     width: 100%;
-    min-height: 400px; /* Ensure it has some height, can be overridden by JS if needed */
-    /* height: 500px; was in one of the files, min-height is more flexible */
+    min-height: 400px;
     margin-top: 0.5rem;
 }
 
@@ -240,180 +242,182 @@ html, body {
 #chart svg,
 #scatter-plot-container svg,
 #bar-chart svg {
-    display: block; /* Removes extra space below SVG */
+    display: block;
     width: 100%;
-    height: auto; /* Maintain aspect ratio defined in JS viewBox or width/height */
-    max-width: 100%; /* Ensure it doesn't overflow container */
+    height: auto;
+    max-width: 100%;
 }
 
 /* Adjustments for axis text in D3 charts if it gets cut off or overlaps */
 .axis text {
-    font-size: 10px; /* Or adjust as needed */
+    font-size: 10px;
+    fill: var(--color-gray-dark);
 }
 .axis path,
 .axis line {
     fill: none;
-    stroke: #888; /* Lighter axis lines */
+    stroke: var(--color-gray-mid);
     shape-rendering: crispEdges;
 }
 
 body {
-  font-family: 'Raleway', sans-serif;
+    font-family: 'Raleway', sans-serif;
 }
 
 /* Controls */
 #controls {
-  width: 100%;
-  padding: 8px;
-  background: #fff;
-  border-bottom: 1px solid #ccc;
+    width: 100%;
+    padding: 8px;
+    background: var(--color-white);
+    border-bottom: 1px solid var(--color-gray-light);
 }
 
 /* Country widget */
 #country-widget {
-  font-family: 'Raleway', sans-serif;
-  margin: 8px 0;
-  padding: 10px;
-  background: #f9f9f9;
-  border: 1px solid #ddd;
+    font-family: 'Raleway', sans-serif;
+    margin: 8px 0;
+    padding: 10px;
+    background: #f9f9f9;
+    border: 1px solid var(--color-gray-light);
 }
 .widget-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 .widget-header .flag {
-  font-size: 1.5em;
+    font-size: 1.5em;
 }
 .widget-header .country-name {
-  font-weight: 600;
-  font-size: 1.2em;
+    font-weight: 600;
+    font-size: 1.2em;
+    color: var(--color-gray-dark);
 }
 .widget-header .pop {
-  margin-left: auto;
-  color: #555;
+    margin-left: auto;
+    color: var(--color-gray-mid);
 }
 .widget-metrics {
-  margin-top: 8px;
-  list-style: none;
-  padding: 0;
+    margin-top: 8px;
+    list-style: none;
+    padding: 0;
 }
 .widget-metrics li {
-  font-size: 1em;
-  margin-bottom: 4px;
+    font-size: 1em;
+    margin-bottom: 4px;
+    color: var(--color-gray-dark);
 }
 .widget-metrics .ls-value {
-  font-weight: 600;
-  color: inherit; /* will pick up inline style */
+    font-weight: 600;
+    color: inherit;
 }
 
 /* Tooltip */
 #tooltip {
-  position: absolute;
-  pointer-events: none;
-  background: rgba(255,255,255,0.95);
-  border: 1px solid #999;
-  padding: 8px;
-  border-radius: 4px;
-  font-family: 'Raleway', sans-serif;
-  font-size: 0.9em;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  z-index: 10;
+    position: absolute;
+    pointer-events: none;
+    background: rgba(255,255,255,0.95);
+    border: 1px solid var(--color-gray-mid);
+    padding: 8px;
+    border-radius: 4px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.9em;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    z-index: 10;
 }
 .tooltip-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
 }
 .tooltip-header .flag {
-  font-size: 1.2em;
+    font-size: 1.2em;
 }
 .tooltip-header .name {
-  font-weight: 600;
+    font-weight: 600;
+    color: var(--color-gray-dark);
 }
 .tooltip-header .pop {
-  margin-left: auto;
-  font-size: 0.85em;
-  color: #555;
+    margin-left: auto;
+    font-size: 0.85em;
+    color: var(--color-gray-mid);
 }
 .tooltip-metric {
-  margin-bottom: 6px;
+    margin-bottom: 6px;
+    color: var(--color-gray-dark);
 }
 .tooltip-metric .ls-value {
-  font-weight: 600;
-  /* inline color is set by JS via style attribute */
+    font-weight: 600;
 }
 .tooltip-chart {
-  display: block;
-  margin: 0 auto;
+    display: block;
+    margin: 0 auto;
 }
-
 
 /* Ensure the tooltip can grow and wrap text */
 #tooltip {
-  position: absolute;
-  pointer-events: none;
-  background: rgba(255, 255, 255, 0.97);
-  border: 1px solid #999;
-  padding: 30px;
-  border-radius: 4px;
-  font-family: 'Raleway', sans-serif;
-  font-size: 0.95em;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  max-width: 240px;        /* allow wider tooltips */
-  white-space: normal;     /* wrap long lines */
-  z-index: 1000;
+    position: absolute;
+    pointer-events: none;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid var(--color-gray-mid);
+    padding: 30px;
+    border-radius: 4px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.95em;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    max-width: 240px;
+    white-space: normal;
+    z-index: 1000;
 }
 
 /* Give a bit more breathing room inside */
 .tooltip-header {
-  margin-bottom: 8px;
+    margin-bottom: 8px;
 }
 .tooltip-metric {
-  margin-bottom: 8px;
+    margin-bottom: 8px;
 }
 
-/* Make the radar-chart container flex-center so it’s always visible */
+/* Make the radar-chart container flex-center so it's always visible */
 .tooltip-chart {
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 6px;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 6px;
 }
 
 /* Legend below chart */
 .tooltip-legend {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 6px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 6px;
 }
 .legend-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.85em;
-  color: #333;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85em;
+    color: var(--color-gray-dark);
 }
 .legend-color {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-  display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    display: inline-block;
 }
 
 /* hide bullet points */
 .tooltip-chart ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
 /* Prevent any overflow hiding */
 .tooltip-chart svg {
-  overflow: visible;
+    overflow: visible;
 }
-
 
 /* 10 ▸ PROGRESS INDICATOR
    ───────────────────────────────*/
@@ -421,15 +425,14 @@ body {
     flex-direction: column;
     gap: 1rem;
 }
-/* 10 ▸ PROGRESS INDICATOR (Updated)
-   ───────────────────────────────*/
+
 .progress-indicator {
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 1rem 0;
-    gap: 45px; /* User-defined gap */
-    padding-top: 1rem; /* Add top padding for dashboard page */
+    gap: 45px;
+    padding-top: 1rem;
 }
 
 /* Base style for dots (upcoming) */
@@ -438,16 +441,16 @@ body {
     height: 18px;
     border-radius: 50%;
     background-color: var(--color-white);
-    border: 2px solid #ccc;
+    border: 2px solid var(--color-gray-light);
     position: relative;
     transition: all 0.3s ease;
-    cursor: pointer; /* Default cursor for clickable dots */
+    cursor: pointer;
 }
 
 /* State: Visited */
 .progress-dot.visited {
-    background-color: #e0e0e0;
-    border-color: #e0e0e0;
+    background-color: var(--color-gray-light);
+    border-color: var(--color-gray-light);
 }
 
 /* State: Active (highlighted) */
@@ -455,7 +458,7 @@ body {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
     transform: scale(1.25);
-    cursor: default; /* Non-clickable for active dot */
+    cursor: default;
 }
 
 /* Special style for the Dashboard dot */
@@ -463,7 +466,7 @@ body {
     background-color: var(--color-white) !important;
     border: 2px dashed var(--color-primary) !important;
     font-size: 16px;
-    cursor: default !important; /* Dashboard dot is not clickable */
+    cursor: default !important;
 }
 
 /* When dashboard dot is active, keep it blue */
@@ -486,7 +489,7 @@ body {
 .selection-notification {
     text-align: center;
     margin-top: 1rem;
-    color: #777;
+    color: var(--color-gray-mid);
     font-style: italic;
     font-size: 0.9rem;
 }
@@ -509,7 +512,7 @@ body {
     padding: 15px;
     background-color: #f8f9fa;
     border-radius: 8px;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--color-gray-light);
 }
 
 .control-panel > div {
@@ -520,16 +523,17 @@ body {
 
 .control-panel label {
     font-weight: 600;
-    color: #495057;
+    color: var(--color-gray-dark);
     font-size: 0.9rem;
 }
 
 .control-panel select {
     padding: 8px 12px;
-    border: 1px solid #ced4da;
+    border: 1px solid var(--color-gray-light);
     border-radius: 4px;
-    background-color: white;
+    background-color: var(--color-white);
     font-size: 0.9rem;
+    color: var(--color-gray-dark);
 }
 
 /* Main Dashboard Grid Layout */
@@ -546,17 +550,17 @@ body {
 .main-chart-panel {
     display: flex;
     flex-direction: column;
-    background: white;
+    background: var(--color-white);
     border-radius: 12px;
     padding: 1.5rem;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--color-gray-light);
 }
 
 .main-chart-panel h2 {
     margin: 0 0 1rem 0;
     font-size: 1.4rem;
-    color: #343a40;
+    color: var(--color-gray-dark);
     font-weight: 700;
 }
 
@@ -565,7 +569,7 @@ body {
     padding: 12px;
     background-color: #f8f9fa;
     border-radius: 8px;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--color-gray-light);
 }
 
 .control-row {
@@ -588,7 +592,7 @@ body {
 .control-group label {
     font-weight: 500;
     font-size: 0.85rem;
-    color: #495057;
+    color: var(--color-gray-dark);
     white-space: nowrap;
 }
 
@@ -596,14 +600,16 @@ body {
     flex: 1;
     min-width: 0;
     padding: 6px 10px;
-    border: 1px solid #ced4da;
+    border: 1px solid var(--color-gray-light);
     border-radius: 4px;
-    background-color: white;
+    background-color: var(--color-white);
     font-size: 0.85rem;
+    color: var(--color-gray-dark);
 }
 
 .control-group input[type="checkbox"] {
     margin: 0;
+    accent-color: var(--color-primary);
 }
 
 #scatter-plot-container {
@@ -624,18 +630,18 @@ body {
 .chart-section {
     display: flex;
     flex-direction: column;
-    background: white;
+    background: var(--color-white);
     border-radius: 12px;
     padding: 1.5rem;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--color-gray-light);
     min-height: 0;
 }
 
 .chart-section h2 {
     margin: 0 0 1rem 0;
     font-size: 1.2rem;
-    color: #343a40;
+    color: var(--color-gray-dark);
     font-weight: 700;
 }
 
@@ -644,7 +650,7 @@ body {
     padding: 10px;
     background-color: #f8f9fa;
     border-radius: 6px;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--color-gray-light);
 }
 
 #chart, #bar-chart {
@@ -672,7 +678,7 @@ body {
     left: 2rem;
     z-index: 1000;
     background: var(--color-primary);
-    color: white;
+    color: var(--color-white);
     padding: 0.75rem 1.5rem;
     border-radius: 25px;
     text-decoration: none;
@@ -684,6 +690,7 @@ body {
 .prev-link:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0, 91, 150, 0.4);
+    background: var(--color-accent);
 }
 
 /* ── RESPONSIVE BREAKPOINTS ────────────────────────────────────── */

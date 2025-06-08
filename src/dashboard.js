@@ -45,7 +45,7 @@ let scatterPlotMasterCountry = null;
 let currentXCategory = 'GDP per capita (USD)';
 let currentYCategory = 'Life satisfaction';
 let shouldScaleByPopulation = false;
-let shouldColorByContinent = false;
+// Removed shouldColorByContinent - always use continent colors
 
 // --- Bar Chart Config & Globals ---
 let barSvg;
@@ -107,7 +107,7 @@ d3.csv('/data/2024BetterLife.csv', d3.autoType).then(raw => {
     const xAxisSelect = document.getElementById('x-axis-select');
     const yAxisSelect = document.getElementById('y-axis-select');
     const scalePopCheckbox = document.getElementById('scale-population-checkbox');
-    const colorByContinentCheckbox = document.getElementById('color-by-continent-checkbox');
+    // Removed colorByContinentCheckbox
     numericKeys = Object.keys(raw[0]).filter(k => k !== 'Country' && k !== 'Flag' && k !== 'Population' && typeof raw[0][k] === 'number');
     if (xAxisSelect && yAxisSelect) {
         for (const k of numericKeys) {
@@ -119,9 +119,6 @@ d3.csv('/data/2024BetterLife.csv', d3.autoType).then(raw => {
     }
     if (scalePopCheckbox) {
         scalePopCheckbox.checked = shouldScaleByPopulation;
-    }
-    if (colorByContinentCheckbox) {
-        colorByContinentCheckbox.checked = shouldColorByContinent;
     }
 
     // --- Bar Chart Controls ---
@@ -153,7 +150,7 @@ d3.csv('/data/2024BetterLife.csv', d3.autoType).then(raw => {
     if (xAxisSelect) xAxisSelect.onchange = () => { currentXCategory = xAxisSelect.value; renderScatterPlot(); };
     if (yAxisSelect) yAxisSelect.onchange = () => { currentYCategory = yAxisSelect.value; renderScatterPlot(); };
     if (scalePopCheckbox) scalePopCheckbox.onchange = () => { shouldScaleByPopulation = scalePopCheckbox.checked; renderScatterPlot(); };
-    if (colorByContinentCheckbox) colorByContinentCheckbox.onchange = () => { shouldColorByContinent = colorByContinentCheckbox.checked; renderScatterPlot(); };
+    // Removed colorByContinentCheckbox event listener
     if (countrySelect) countrySelect.onchange = () => {
         scatterPlotMasterCountry = countrySelect.value;
         localStorage.setItem('bli-selected-country', scatterPlotMasterCountry);
@@ -269,13 +266,8 @@ function renderScatterPlot() {
             )
     )
         .attr('fill', d => {
-            // Use continent colors if checkbox is checked OR if no checkbox preference is set (default to continent colors)
-            if (shouldColorByContinent) {
-                return continentPalette[regionOf(d.Country)] || '#ccc';
-            } else {
-                // Use the onboarding style colors even when not explicitly colored by continent
-                return continentPalette[regionOf(d.Country)] || '#007acc';
-            }
+            // Always use continent colors in dashboard
+            return continentPalette[regionOf(d.Country)] || '#ccc';
         })
         .attr('opacity', d => {
             if (scatterPlotMasterCountry && d.Country !== scatterPlotMasterCountry) {
@@ -302,7 +294,7 @@ function renderScatterPlot() {
     // Remove old legend
     scatterPlotG.select('.scatter-legend').remove();
 
-    // Always show legend (like onboarding), but style it based on color mode
+    // Always show legend with continent colors
     const legend = scatterPlotG.append("g")
         .attr("class", "scatter-legend")
         .attr("transform", `translate(${drawingWidth + 20}, 0)`);
@@ -321,15 +313,7 @@ function renderScatterPlot() {
         .attr("width", 18)
         .attr("height", 18)
         .attr("fill", d => d[1])
-        .attr("opacity", () => {
-            // Show legend more prominently when color by continent is enabled
-            if (shouldColorByContinent) {
-                return scatterPlotMasterCountry ? 0.5 : 0.9;
-            } else {
-                // Still show but more subtle when not explicitly using continent colors
-                return scatterPlotMasterCountry ? 0.3 : 0.6;
-            }
-        });
+        .attr("opacity", scatterPlotMasterCountry ? 0.5 : 0.9);
 
     legendItems.append("text")
         .attr("x", 24)
@@ -337,13 +321,7 @@ function renderScatterPlot() {
         .text(d => d[0])
         .style("font-size", "14px")
         .attr("alignment-baseline", "middle")
-        .attr("opacity", () => {
-            if (shouldColorByContinent) {
-                return scatterPlotMasterCountry ? 0.7 : 1.0;
-            } else {
-                return scatterPlotMasterCountry ? 0.5 : 0.7;
-            }
-        });
+        .attr("opacity", scatterPlotMasterCountry ? 0.7 : 1.0);
 }
 
 // 4. Radar Chart Functions

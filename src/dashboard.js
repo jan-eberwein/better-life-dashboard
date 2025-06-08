@@ -184,7 +184,7 @@ function setupScatterPlotSVG(selector) {
     container.selectAll('*').remove();
 
     scatterPlotSvg = container.append('svg')
-        .attr('viewBox', '0 0 800 500')
+        .attr('viewBox', '0 0 900 500') // Increased width for legend
         .attr('style', 'width: 100%; height: 100%; background: #fdfdfd; font-family: Raleway, sans-serif; border-radius: 8px;');
 
     scatterPlotG = scatterPlotSvg.append('g')
@@ -200,7 +200,7 @@ function setupScatterPlotSVG(selector) {
 function renderScatterPlot() {
     if (!scatterPlotG || !betterlifeindexDataWide.length) return;
 
-    const drawingWidth = 720;
+    const drawingWidth = 620; // Reduced to make room for legend
     const drawingHeight = 400;
     const margin = { bottom: 60, left: 50 };
 
@@ -212,13 +212,13 @@ function renderScatterPlot() {
 
     const xScale = d3.scaleLinear().domain(d3.extent(filteredData, d => d[currentXCategory])).nice().range([0, drawingWidth]);
     const yScale = d3.scaleLinear().domain(d3.extent(filteredData, d => d[currentYCategory])).nice().range([drawingHeight, 0]);
-    const radiusScale = d3.scaleSqrt().domain(d3.extent(filteredData, d => d.Population)).range([4, 20]);
+    const radiusScale = d3.scaleSqrt().domain(d3.extent(filteredData, d => d.Population)).range([5, 30]); // Updated range like onboarding
 
     // Animate Axes
     scatterPlotG.select('.x-axis')
         .attr('transform', `translate(0,${drawingHeight})`)
         .transition().duration(scatterPlotAnimationDuration)
-        .call(d3.axisBottom(xScale).tickFormat(d3.format('.2s')));
+        .call(d3.axisBottom(xScale).tickFormat(d3.format('$.2s')));
 
     scatterPlotG.select('.y-axis')
         .transition().duration(scatterPlotAnimationDuration)
@@ -269,11 +269,21 @@ function renderScatterPlot() {
             )
     )
         .attr('fill', d => {
-            if (shouldColorByContinent) return continentPalette[regionOf(d.Country)] || '#ccc';
-            return '#007acc';
+            // Use continent colors if checkbox is checked OR if no checkbox preference is set (default to continent colors)
+            if (shouldColorByContinent) {
+                return continentPalette[regionOf(d.Country)] || '#ccc';
+            } else {
+                // Use the onboarding style colors even when not explicitly colored by continent
+                return continentPalette[regionOf(d.Country)] || '#007acc';
+            }
         })
-        .attr('fill-opacity', d => d.Country === scatterPlotMasterCountry ? 1 : 0.7)
-        .attr('stroke', d => d.Country === scatterPlotMasterCountry ? '#333' : 'none')
+        .attr('opacity', d => {
+            if (scatterPlotMasterCountry && d.Country !== scatterPlotMasterCountry) {
+                return 0.5; // Fade non-selected countries like in onboarding
+            }
+            return 0.9; // Default opacity like in onboarding
+        })
+        .attr('stroke', d => d.Country === scatterPlotMasterCountry ? 'black' : 'none')
         .attr('stroke-width', d => d.Country === scatterPlotMasterCountry ? 2 : 0)
         .on('mouseover', (event, d) => {
             tooltip.style('opacity',0.95);
@@ -284,39 +294,56 @@ function renderScatterPlot() {
         })
         .on('mouseout', () => tooltip.style('opacity',0));
 
-    // Add conditional legend
+    // Raise the selected country's circle to be on top (like onboarding)
+    if (scatterPlotMasterCountry) {
+        circles.filter(d => d.Country === scatterPlotMasterCountry).raise();
+    }
+
+    // Remove old legend
     scatterPlotG.select('.scatter-legend').remove();
 
-    if (shouldColorByContinent) {
-        const legend = scatterPlotG.append("g")
-            .attr("class", "scatter-legend")
-            .attr("transform", `translate(${drawingWidth + 30}, 20)`);
+    // Always show legend (like onboarding), but style it based on color mode
+    const legend = scatterPlotG.append("g")
+        .attr("class", "scatter-legend")
+        .attr("transform", `translate(${drawingWidth + 20}, 0)`);
 
-        const excludedKeys = ["Africa", "OECD Average", "Other"];
-        const legendData = Object.entries(continentPalette)
-            .filter(([key]) => !excludedKeys.includes(key));
+    // Use the same legend data as onboarding (excluding certain entries)
+    const legendData = Object.entries(continentPalette)
+        .filter(([key]) => !["Africa", "OECD Average", "Other"].includes(key));
 
-        const legendItems = legend.selectAll(".legend-item")
-            .data(legendData)
-            .join("g")
-            .attr("class", "legend-item")
-            .attr("transform", (d, i) => `translate(0, ${i * 22})`);
+    const legendItems = legend.selectAll(".legend-item")
+        .data(legendData)
+        .join("g")
+        .attr("class", "legend-item")
+        .attr("transform", (d, i) => `translate(0, ${i * 25})`);
 
-        legendItems.append("rect")
-            .attr("width", 16)
-            .attr("height", 16)
-            .attr("fill", d => d[1])
-            .attr("fill-opacity", 0.8)
-            .attr("rx", 2);
+    legendItems.append("rect")
+        .attr("width", 18)
+        .attr("height", 18)
+        .attr("fill", d => d[1])
+        .attr("opacity", () => {
+            // Show legend more prominently when color by continent is enabled
+            if (shouldColorByContinent) {
+                return scatterPlotMasterCountry ? 0.5 : 0.9;
+            } else {
+                // Still show but more subtle when not explicitly using continent colors
+                return scatterPlotMasterCountry ? 0.3 : 0.6;
+            }
+        });
 
-        legendItems.append("text")
-            .attr("x", 22)
-            .attr("y", 12)
-            .text(d => d[0])
-            .style("font-size", "11px")
-            .style("font-weight", "500")
-            .attr("alignment-baseline", "middle");
-    }
+    legendItems.append("text")
+        .attr("x", 24)
+        .attr("y", 14)
+        .text(d => d[0])
+        .style("font-size", "14px")
+        .attr("alignment-baseline", "middle")
+        .attr("opacity", () => {
+            if (shouldColorByContinent) {
+                return scatterPlotMasterCountry ? 0.7 : 1.0;
+            } else {
+                return scatterPlotMasterCountry ? 0.5 : 0.7;
+            }
+        });
 }
 
 // 4. Radar Chart Functions

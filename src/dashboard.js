@@ -567,24 +567,21 @@ function renderBarChart() {
             .attr('height', d => drawingHeight - yLin(d.value))
             .attr('fill', d => {
                 if (continentMode) {
-                    // Use the SAME bright continent colors as the scatter plot legend
+                    // Use bright continent colors for continent mode
                     return BAR_CHART_COLORS.continent[d.key] || BAR_CHART_COLORS.default;
                 } else {
-                    // Highlight selected country
-                    return d.key === scatterPlotMasterCountry ? BAR_CHART_COLORS.selected : BAR_CHART_COLORS.default;
+                    // For individual countries, use continent-based bright colors
+                    const continent = regionOf(d.key);
+                    return BAR_CHART_COLORS.continent[continent] || BAR_CHART_COLORS.default;
                 }
             })
-            .attr('stroke', d => {
-                if (!continentMode && d.key === scatterPlotMasterCountry) {
-                    return BAR_CHART_COLORS.selectedStroke;
+            .attr('opacity', d => {
+                // Always apply opacity for consistency with scatter plot
+                if (continentMode) {
+                    return 0.9; // All continent bars get same opacity as scatter plot
+                } else {
+                    return d.key === scatterPlotMasterCountry ? 0.9 : 0.5; // Country mode with highlighting
                 }
-                return 'none';
-            })
-            .attr('stroke-width', d => {
-                if (!continentMode && d.key === scatterPlotMasterCountry) {
-                    return 2;
-                }
-                return 0;
             })
             .attr('rx', 2)
             .on('mouseover', (event, d) => {
@@ -615,24 +612,21 @@ function renderBarChart() {
             .attr('width', d => xLin(d.value))
             .attr('fill', d => {
                 if (continentMode) {
-                    // Use the SAME bright continent colors as the scatter plot legend
+                    // Use bright continent colors for continent mode
                     return BAR_CHART_COLORS.continent[d.key] || BAR_CHART_COLORS.default;
                 } else {
-                    // Highlight selected country
-                    return d.key === scatterPlotMasterCountry ? BAR_CHART_COLORS.selected : BAR_CHART_COLORS.default;
+                    // For individual countries, use continent-based bright colors
+                    const continent = regionOf(d.key);
+                    return BAR_CHART_COLORS.continent[continent] || BAR_CHART_COLORS.default;
                 }
             })
-            .attr('stroke', d => {
-                if (!continentMode && d.key === scatterPlotMasterCountry) {
-                    return BAR_CHART_COLORS.selectedStroke;
+            .attr('opacity', d => {
+                // Always apply opacity for consistency with scatter plot
+                if (continentMode) {
+                    return 0.9; // All continent bars get same opacity as scatter plot
+                } else {
+                    return d.key === scatterPlotMasterCountry ? 0.9 : 0.5; // Country mode with highlighting
                 }
-                return 'none';
-            })
-            .attr('stroke-width', d => {
-                if (!continentMode && d.key === scatterPlotMasterCountry) {
-                    return 2;
-                }
-                return 0;
             })
             .attr('rx', 2)
             .on('mouseover', (event, d) => {

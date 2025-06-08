@@ -13,7 +13,7 @@
 <div class="dashboard-container">
     <h1 class="headline">OECD Better Life Index Dashboard</h1>
 
-    <section class="control-panel" style="margin-bottom: 20px;">
+    <section class="control-panel">
         <div>
             <label for="country-select">Select Country (for Radar & Scatter Plot Highlight):</label>
             <select id="country-select">
@@ -22,54 +22,71 @@
         </div>
     </section>
 
-    <section id="radar-chart-section" style="margin-top: 20px;">
-        <h2 style="font-size: 1.5em; margin-bottom: 10px;">Country Profile vs. OECD Average</h2>
-        <div id="chart"></div> </section>
-
-    <section id="scatter-plot-section" style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
-        <h2 style="font-size: 1.5em; margin-bottom: 10px;">Explore Indicator Relationships</h2>
-
-        <div class="scatter-plot-controls" style="margin-bottom: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 4px; border: 1px solid #ddd;">
-            <div>
-                <label for="x-axis-select" style="display: inline-block; min-width: 60px; margin-bottom: 5px;">X-Axis:</label>
-                <select id="x-axis-select"></select>
-            </div>
-            <div style="margin-top: 5px;">
-                <label for="y-axis-select" style="display: inline-block; min-width: 60px; margin-bottom: 5px;">Y-Axis:</label>
-                <select id="y-axis-select"></select>
-            </div>
-            <div style="margin-top: 10px;">
-                <input type="checkbox" id="scale-population-checkbox" style="margin-left: 0; vertical-align: middle;">
-                <label for="scale-population-checkbox" style="vertical-align: middle;">Scale dots by population</label>
-            </div>
-            <div style="margin-top: 10px;">
-                <input type="checkbox" id="color-by-continent-checkbox" style="margin-left: 0; vertical-align: middle;">
-                <label for="color-by-continent-checkbox" style="vertical-align: middle;">Color by Continent</label>
-            </div>
+    <!-- Main Dashboard Grid -->
+    <div class="dashboard-grid">
+        <!-- Left Panel - Main Chart (60% width) -->
+        <div class="main-chart-panel">
+            <section id="scatter-plot-section">
+                <h2>Explore Indicator Relationships</h2>
+                <div class="scatter-plot-controls">
+                    <div class="control-row">
+                        <div class="control-group">
+                            <label for="x-axis-select">X-Axis:</label>
+                            <select id="x-axis-select"></select>
+                        </div>
+                        <div class="control-group">
+                            <label for="y-axis-select">Y-Axis:</label>
+                            <select id="y-axis-select"></select>
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-group">
+                            <input type="checkbox" id="scale-population-checkbox">
+                            <label for="scale-population-checkbox">Scale dots by population</label>
+                        </div>
+                        <div class="control-group">
+                            <input type="checkbox" id="color-by-continent-checkbox">
+                            <label for="color-by-continent-checkbox">Color by Continent</label>
+                        </div>
+                    </div>
+                </div>
+                <div id="scatter-plot-container"></div>
+            </section>
         </div>
 
-        <div id="scatter-plot-container"></div> </section>
+        <!-- Right Panel - Two Charts (40% width) -->
+        <div class="side-charts-panel">
+            <!-- Top Right - Radar Chart -->
+            <section id="radar-chart-section" class="chart-section">
+                <h2>Country Profile vs. OECD Average</h2>
+                <div id="chart"></div>
+            </section>
 
-    <section id="bar-chart-section" style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
-        <h2 style="font-size: 1.5em; margin-bottom: 10px;">Compare Countries and Continents</h2>
-
-        <div class="bar-chart-controls" style="margin-bottom: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 4px; border: 1px solid #ddd;">
-            <div>
-                <label for="property-select" style="display: inline-block; min-width: 120px; margin-bottom: 5px;">Select Property:</label>
-                <select id="property-select"></select>
-            </div>
-            <div style="margin-top: 10px;">
-                <input type="checkbox" id="continent-mode" style="margin-left: 0; vertical-align: middle;">
-                <label for="continent-mode" style="vertical-align: middle;">Group by Continent</label>
-            </div>
-            <div id="num-select-group" style="margin-top: 5px;">
-                <label for="num-select" style="display: inline-block; min-width: 120px; margin-bottom: 5px;">Show (Countries):</label>
-                <select id="num-select"></select>
-            </div>
+            <!-- Bottom Right - Bar Chart -->
+            <section id="bar-chart-section" class="chart-section">
+                <h2>Compare Countries and Continents</h2>
+                <div class="bar-chart-controls">
+                    <div class="control-row">
+                        <div class="control-group">
+                            <label for="property-select">Select Property:</label>
+                            <select id="property-select"></select>
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-group">
+                            <input type="checkbox" id="continent-mode">
+                            <label for="continent-mode">Group by Continent</label>
+                        </div>
+                        <div id="num-select-group" class="control-group">
+                            <label for="num-select">Show (Countries):</label>
+                            <select id="num-select"></select>
+                        </div>
+                    </div>
+                </div>
+                <div id="bar-chart"></div>
+            </section>
         </div>
-
-        <div id="bar-chart"></div> </section>
-
+    </div>
 </div>
 
 <a href="index.html" class="prev-link nav-btn">← Go to Introduction</a>

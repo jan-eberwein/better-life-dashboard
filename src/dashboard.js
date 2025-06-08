@@ -25,12 +25,8 @@ const formatIndicatorRadar = (ind) => ({
 }[ind] || ind);
 
 // --- Scatter Plot Config & Globals ---
-const scatterPlotFullWidth = 750;
-const scatterPlotFullHeight = 550;
-const scatterPlotMargin = { top: 30, right: 130, bottom: 50, left: 60 };
-const scatterPlotFixedRadius = 5;
-const scatterPlotHighlightColor = "orange"; // This is no longer used for fill, but kept for potential future use
 const scatterPlotAnimationDuration = 750;
+const scatterPlotFixedRadius = 5;
 
 const continentPalette = {
     Europe: "#1f77b4",
@@ -52,15 +48,16 @@ let shouldScaleByPopulation = false;
 let shouldColorByContinent = false;
 
 // --- Bar Chart Config & Globals ---
-const barChartFullWidth = 900;
-const barChartFullHeight = 500;
-const barChartMargin = { top: 40, right: 20, bottom: 60, left: 80 };
 let barSvg;
 let barG;
 let numericKeys = [];
 
+// --- Radar Chart Globals ---
+let radarSvg;
+let radarG;
+
 // 2. Load CSV and initialize controls
-d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
+d3.csv('/data/2024BetterLife.csv', d3.autoType).then(raw => {
     if (!raw || raw.length === 0) {
         console.error("Failed to load or data is empty.");
         return;
@@ -140,8 +137,9 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
         numSelect.value = 'Top 10';
     }
 
-    // Setup SVG containers
+    // Setup SVG containers with responsive sizing
     setupScatterPlotSVG('#scatter-plot-container');
+    setupRadarChartSVG('#chart');
     setupBarChartSVG('#bar-chart');
 
     // Initial Render
@@ -169,47 +167,59 @@ d3.csv('/2024BetterLife.csv', d3.autoType).then(raw => {
         if (numGroup) numGroup.style.display = continentCheckbox.checked ? 'none' : '';
         renderBarChart();
     };
+
+    // Add resize listener for responsive charts
+    window.addEventListener('resize', debounce(() => {
+        renderScatterPlot();
+        if (scatterPlotMasterCountry) renderRadarChart('#chart', radarChartLongData, extentByIndicatorRadar, scatterPlotMasterCountry);
+        renderBarChart();
+    }, 250));
 });
 
 // 3. Scatter Plot Functions
 function setupScatterPlotSVG(selector) {
     const container = d3.select(selector);
     if (container.empty()) { console.error(`Scatter plot container ${selector} not found.`); return; }
+
+    container.selectAll('*').remove();
+
     scatterPlotSvg = container.append('svg')
-        .attr('width', scatterPlotFullWidth)
-        .attr('height', scatterPlotFullHeight)
-        .attr('viewBox', `0 0 ${scatterPlotFullWidth} ${scatterPlotFullHeight}`)
-        .attr('style', 'max-width: 100%; height: auto; background: #f9f9f9; font-family: Raleway, sans-serif; border: 1px solid #ddd;');
+        .attr('viewBox', '0 0 800 500')
+        .attr('style', 'width: 100%; height: 100%; background: #fdfdfd; font-family: Raleway, sans-serif; border-radius: 8px;');
+
     scatterPlotG = scatterPlotSvg.append('g')
-        .attr('transform', `translate(${scatterPlotMargin.left},${scatterPlotMargin.top})`);
-    
+        .attr('transform', 'translate(60,20)');
+
     // Create persistent axis and label groups
     scatterPlotG.append('g').attr('class', 'x-axis');
     scatterPlotG.append('g').attr('class', 'y-axis');
-    scatterPlotG.append('text').attr('class', 'x-label').attr('text-anchor', 'middle').attr('fill','black').style('font-size','12px');
-    scatterPlotG.append('text').attr('class', 'y-label').attr('text-anchor', 'middle').attr('fill','black').style('font-size','12px').attr('transform','rotate(-90)');
+    scatterPlotG.append('text').attr('class', 'x-label').attr('text-anchor', 'middle').attr('fill','#333').style('font-size','12px').style('font-weight','500');
+    scatterPlotG.append('text').attr('class', 'y-label').attr('text-anchor', 'middle').attr('fill','#333').style('font-size','12px').style('font-weight','500').attr('transform','rotate(-90)');
 }
 
 function renderScatterPlot() {
     if (!scatterPlotG || !betterlifeindexDataWide.length) return;
-    const drawingWidth = scatterPlotFullWidth - scatterPlotMargin.left - scatterPlotMargin.right;
-    const drawingHeight = scatterPlotFullHeight - scatterPlotMargin.top - scatterPlotMargin.bottom;
+
+    const drawingWidth = 720;
+    const drawingHeight = 400;
+    const margin = { bottom: 60, left: 50 };
+
     const filteredData = betterlifeindexDataWide.filter(d =>
         typeof d[currentXCategory] === 'number' && !isNaN(d[currentXCategory]) &&
         typeof d[currentYCategory] === 'number' && !isNaN(d[currentYCategory]) &&
         d.Population !== undefined && typeof d.Population === 'number' && !isNaN(d.Population)
     );
-    
+
     const xScale = d3.scaleLinear().domain(d3.extent(filteredData, d => d[currentXCategory])).nice().range([0, drawingWidth]);
     const yScale = d3.scaleLinear().domain(d3.extent(filteredData, d => d[currentYCategory])).nice().range([drawingHeight, 0]);
-    const radiusScale = d3.scaleSqrt().domain(d3.extent(filteredData, d => d.Population)).range([3, 25]);
-    
+    const radiusScale = d3.scaleSqrt().domain(d3.extent(filteredData, d => d.Population)).range([4, 20]);
+
     // Animate Axes
     scatterPlotG.select('.x-axis')
         .attr('transform', `translate(0,${drawingHeight})`)
         .transition().duration(scatterPlotAnimationDuration)
-        .call(d3.axisBottom(xScale));
-        
+        .call(d3.axisBottom(xScale).tickFormat(d3.format('.2s')));
+
     scatterPlotG.select('.y-axis')
         .transition().duration(scatterPlotAnimationDuration)
         .call(d3.axisLeft(yScale));
@@ -217,20 +227,20 @@ function renderScatterPlot() {
     // Update Labels
     scatterPlotG.select('.x-label')
         .attr('x', drawingWidth / 2)
-        .attr('y', drawingHeight + scatterPlotMargin.bottom - 10)
+        .attr('y', drawingHeight + 45)
         .text(currentXCategory);
 
     scatterPlotG.select('.y-label')
         .attr('x', -drawingHeight / 2)
-        .attr('y', -scatterPlotMargin.left + 15)
+        .attr('y', -35)
         .text(currentYCategory);
 
     let tooltip = d3.select('body').select('.scatter-tooltip-external');
     if (tooltip.empty()) {
         tooltip = d3.select('body').append('div').attr('class','scatter-tooltip-external')
-            .style('position','absolute').style('background','rgba(255,255,255,0.95)').style('padding','8px 12px')
-            .style('border','1px solid #ccc').style('border-radius','4px').style('pointer-events','none')
-            .style('opacity',0).style('font-size','11px').style('box-shadow','0 2px 4px rgba(0,0,0,0.1)').style('white-space','nowrap').style('z-index','1050');
+            .style('position','absolute').style('background','rgba(255,255,255,0.96)').style('padding','10px 14px')
+            .style('border','1px solid #ddd').style('border-radius','6px').style('pointer-events','none')
+            .style('opacity',0).style('font-size','12px').style('box-shadow','0 4px 12px rgba(0,0,0,0.15)').style('white-space','nowrap').style('z-index','1050');
     }
 
     // Draw and animate circles
@@ -258,22 +268,21 @@ function renderScatterPlot() {
                 .remove()
             )
     )
-    // MODIFIED: Simplified fill logic
-    .attr('fill', d => {
-        if (shouldColorByContinent) return continentPalette[regionOf(d.Country)] || '#ccc';
-        return '#007acc';
-    })
-    // Highlighting is now done only by opacity and stroke
-    .attr('fill-opacity', d => d.Country === scatterPlotMasterCountry ? 1 : 0.6)
-    .attr('stroke', d => d.Country === scatterPlotMasterCountry ? 'black' : 'none')
-    .on('mouseover', (event, d) => {
-        tooltip.style('opacity',0.9);
-        const formatComma = d3.format(',');
-        tooltip.html(`<strong>${d.Country} ${d.Flag || ''}</strong><br>${currentXCategory}: ${d[currentXCategory]}<br>${currentYCategory}: ${d[currentYCategory]}<br>Population: ${formatComma(d.Population)}`)
-            .style('left',`${event.pageX+10}px`).style('top',`${event.pageY-20}px`);
-        d3.select(event.currentTarget).raise();
-    })
-    .on('mouseout', () => tooltip.style('opacity',0));
+        .attr('fill', d => {
+            if (shouldColorByContinent) return continentPalette[regionOf(d.Country)] || '#ccc';
+            return '#007acc';
+        })
+        .attr('fill-opacity', d => d.Country === scatterPlotMasterCountry ? 1 : 0.7)
+        .attr('stroke', d => d.Country === scatterPlotMasterCountry ? '#333' : 'none')
+        .attr('stroke-width', d => d.Country === scatterPlotMasterCountry ? 2 : 0)
+        .on('mouseover', (event, d) => {
+            tooltip.style('opacity',0.95);
+            const formatComma = d3.format(',');
+            tooltip.html(`<strong>${d.Country} ${d.Flag || ''}</strong><br>${currentXCategory}: ${d[currentXCategory]}<br>${currentYCategory}: ${d[currentYCategory]}<br>Population: ${formatComma(d.Population)}`)
+                .style('left',`${event.pageX+12}px`).style('top',`${event.pageY-10}px`);
+            d3.select(event.currentTarget).raise();
+        })
+        .on('mouseout', () => tooltip.style('opacity',0));
 
     // Add conditional legend
     scatterPlotG.select('.scatter-legend').remove();
@@ -281,63 +290,78 @@ function renderScatterPlot() {
     if (shouldColorByContinent) {
         const legend = scatterPlotG.append("g")
             .attr("class", "scatter-legend")
-            .attr("transform", `translate(${drawingWidth + 20}, 0)`);
-        
+            .attr("transform", `translate(${drawingWidth + 30}, 20)`);
+
         const excludedKeys = ["Africa", "OECD Average", "Other"];
         const legendData = Object.entries(continentPalette)
-                                 .filter(([key]) => !excludedKeys.includes(key));
+            .filter(([key]) => !excludedKeys.includes(key));
 
         const legendItems = legend.selectAll(".legend-item")
             .data(legendData)
             .join("g")
             .attr("class", "legend-item")
-            .attr("transform", (d, i) => `translate(0, ${i * 20})`);
+            .attr("transform", (d, i) => `translate(0, ${i * 22})`);
 
         legendItems.append("rect")
-            .attr("width", 15)
-            .attr("height", 15)
+            .attr("width", 16)
+            .attr("height", 16)
             .attr("fill", d => d[1])
-            .attr("fill-opacity", 0.6);
+            .attr("fill-opacity", 0.8)
+            .attr("rx", 2);
 
         legendItems.append("text")
-            .attr("x", 20)
+            .attr("x", 22)
             .attr("y", 12)
             .text(d => d[0])
-            .style("font-size", "12px")
+            .style("font-size", "11px")
+            .style("font-weight", "500")
             .attr("alignment-baseline", "middle");
     }
 }
 
 // 4. Radar Chart Functions
+function setupRadarChartSVG(selector) {
+    const container = d3.select(selector);
+    if (container.empty()) { console.error(`Radar chart container ${selector} not found.`); return; }
+
+    container.selectAll('*').remove();
+}
+
 function renderRadarChart(selector, data, extents, selectedCountry) {
     const chartContainer = d3.select(selector);
     if (chartContainer.empty()) { console.error(`Radar chart container ${selector} not found.`); return; }
     chartContainer.selectAll('*').remove();
-    const radarMargin = { top:50, right:100, bottom:50, left:100 };
-    const W = 700, H = 600;
-    const R = Math.min(W - radarMargin.left - radarMargin.right, H - radarMargin.top - radarMargin.bottom) / 2;
+
+    const W = 350, H = 280;
+    const radarMargin = { top: 20, right: 40, bottom: 20, left: 40 };
+    const R = Math.min(W - radarMargin.left - radarMargin.right, H - radarMargin.top - radarMargin.bottom) / 2 - 20;
     const angle = 2 * Math.PI / selectedIndicatorsRadar.length;
-    const levels = 5;
+    const levels = 4;
+
     const svgRadar = chartContainer.append('svg')
-        .attr('width', W).attr('height', H).attr('viewBox',`0 0 ${W} ${H}`)
-        .style('background','var(--color-white)').style('font-family','Raleway, sans-serif');
+        .attr('viewBox', `0 0 ${W} ${H}`)
+        .style('width', '100%').style('height', '100%')
+        .style('background','#fdfdfd').style('font-family','Raleway, sans-serif')
+        .style('border-radius', '8px');
     const gRadar = svgRadar.append('g').attr('transform',`translate(${W/2},${H/2})`);
 
     for (let i=1; i<=levels; i++) {
-        gRadar.append('circle').attr('r', R*i/levels).attr('fill','none').attr('stroke','#ccc');
+        gRadar.append('circle').attr('r', R*i/levels).attr('fill','none').attr('stroke','#e0e0e0').attr('stroke-width', 1);
     }
 
     selectedIndicatorsRadar.forEach((ind,i) => {
         const a = i*angle - Math.PI/2;
         const x_ax = R * Math.cos(a), y_ax = R * Math.sin(a);
         gRadar.append('line').attr('x1',0).attr('y1',0)
-            .attr('x2',x_ax).attr('y2',y_ax).attr('stroke','#999');
+            .attr('x2',x_ax).attr('y2',y_ax).attr('stroke','#ccc').attr('stroke-width', 0.5);
         gRadar.append('text')
-            .attr('x',(R+25)*Math.cos(a))
-            .attr('y',(R+25)*Math.sin(a))
+            .attr('x',(R+15)*Math.cos(a))
+            .attr('y',(R+15)*Math.sin(a))
             .attr('dy', ((a > Math.PI / 2 && a < 3 * Math.PI / 2) || (a < -Math.PI / 2 && a > -3 * Math.PI / 2)) ? '1em' : '0.35em')
             .attr('text-anchor', Math.abs(Math.cos(a)) < 0.01 ? 'middle' : (Math.cos(a) > 0 ? 'start' : 'end'))
-            .style('font-size', '11px')
+            .style('font-size', '9px')
+            .style('font-weight', '500')
+            .style('fill', '#555')
             .text(formatIndicatorRadar(ind));
     });
 
@@ -383,7 +407,7 @@ function renderRadarChart(selector, data, extents, selectedCountry) {
             .datum(ordered)
             .attr('d', radarLineGen)
             .attr('fill', colorRadar(countryName))
-            .attr('fill-opacity', 0.2)
+            .attr('fill-opacity', 0.25)
             .attr('stroke', colorRadar(countryName))
             .attr('stroke-width', 2);
         ordered.forEach((d, i) => {
@@ -393,18 +417,20 @@ function renderRadarChart(selector, data, extents, selectedCountry) {
             gRadar.append('circle')
                 .attr('cx', r_pt * Math.cos(a))
                 .attr('cy', r_pt * Math.sin(a))
-                .attr('r', 4)
-                .attr('fill', colorRadar(countryName));
+                .attr('r', 3)
+                .attr('fill', colorRadar(countryName))
+                .attr('stroke', 'white')
+                .attr('stroke-width', 1);
         });
     }
 
     const legendRadar = svgRadar.append('g')
-        .attr('transform', `translate(${W - radarMargin.right + 20},${radarMargin.top})`);
+        .attr('transform', `translate(${W - 80},${H - 50})`);
     [selectedCountry, 'OECD'].forEach((c, i) => {
-        const lg = legendRadar.append('g').attr('transform', `translate(0,${25 * i})`);
-        lg.append('line').attr('x1', 0).attr('y1', 10).attr('x2', 30).attr('y2', 10).attr('stroke', colorRadar(c)).attr('stroke-width', 2);
-        lg.append('circle').attr('cx', 15).attr('cy', 10).attr('r', 4).attr('fill', colorRadar(c));
-        lg.append('text').attr('x', 40).attr('y', 10).attr('dy', '0.35em').style('font-size', '12px').text(c);
+        const lg = legendRadar.append('g').attr('transform', `translate(0,${18 * i})`);
+        lg.append('line').attr('x1', 0).attr('y1', 8).attr('x2', 20).attr('y2', 8).attr('stroke', colorRadar(c)).attr('stroke-width', 2);
+        lg.append('circle').attr('cx', 10).attr('cy', 8).attr('r', 3).attr('fill', colorRadar(c)).attr('stroke', 'white').attr('stroke-width', 1);
+        lg.append('text').attr('x', 25).attr('y', 8).attr('dy', '0.35em').style('font-size', '10px').style('font-weight', '500').text(c);
     });
 }
 
@@ -415,17 +441,14 @@ function setupBarChartSVG(selector) {
         console.error(`Bar chart container ${selector} not found.`);
         return;
     }
-    barSvg = container.append('svg')
-        .attr('width', barChartFullWidth)
-        .attr('height', barChartFullHeight)
-        .attr('viewBox', `0 0 ${barChartFullWidth} ${barChartFullHeight}`)
-        .style('max-width', '100%').style('height', 'auto');
-    barG = barSvg.append('g')
-        .attr('transform', `translate(${barChartMargin.left},${barChartMargin.top})`);
+    container.selectAll('*').remove();
 }
 
 function renderBarChart() {
-    if (!barG || !betterlifeindexDataWide.length) return;
+    const container = d3.select('#bar-chart');
+    if (container.empty() || !betterlifeindexDataWide.length) return;
+
+    container.selectAll('*').remove();
 
     const continentCheckbox = document.getElementById('continent-mode');
     const numSelect = document.getElementById('num-select');
@@ -435,10 +458,10 @@ function renderBarChart() {
     const numVal = numSelect ? numSelect.value : 'Top 10';
     const prop = propertySelect ? propertySelect.value : (numericKeys.length > 0 ? numericKeys[0] : null);
 
-    if (!prop) { barG.selectAll("*").remove(); return; }
+    if (!prop) return;
 
     const dataForProp = betterlifeindexDataWide.filter(d => typeof d[prop] === 'number' && !isNaN(d[prop]));
-    if (dataForProp.length === 0) { barG.selectAll("*").remove(); return; }
+    if (dataForProp.length === 0) return;
 
     const grouped = continentMode
         ? d3.rollup(dataForProp, v => d3.mean(v, d => d[prop]), d => regionOf(d.Country))
@@ -457,46 +480,71 @@ function renderBarChart() {
         }
     }
 
-    if (entries.length === 0) { barG.selectAll("*").remove(); return; }
+    if (entries.length === 0) return;
 
-    barG.selectAll('*').remove();
-
-    const drawingWidth = barChartFullWidth - barChartMargin.left - barChartMargin.right;
-    const drawingHeight = barChartFullHeight - barChartMargin.top - barChartMargin.bottom;
+    const W = 350, H = 280;
+    const margin = { top: 20, right: 20, bottom: 50, left: 60 };
+    const drawingWidth = W - margin.left - margin.right;
+    const drawingHeight = H - margin.top - margin.bottom;
     const maxValue = d3.max(entries, d => d.value);
 
     if (maxValue === undefined) return;
 
+    const svg = container.append('svg')
+        .attr('viewBox', `0 0 ${W} ${H}`)
+        .style('width', '100%').style('height', '100%')
+        .style('background', '#fdfdfd').style('border-radius', '8px');
+
+    const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
     const vertical = continentMode || ['Top 3', 'Top 5'].includes(numVal);
 
     if (vertical) {
-        const xBand = d3.scaleBand().domain(entries.map(d => d.key)).range([0, drawingWidth]).padding(0.1);
+        const xBand = d3.scaleBand().domain(entries.map(d => d.key)).range([0, drawingWidth]).padding(0.15);
         const yLin = d3.scaleLinear().domain([0, maxValue]).nice().range([drawingHeight, 0]);
-        barG.append('g').attr('transform', `translate(0,${drawingHeight})`).call(d3.axisBottom(xBand))
+
+        g.append('g').attr('transform', `translate(0,${drawingHeight})`).call(d3.axisBottom(xBand))
             .selectAll("text")
             .style("text-anchor", "end")
+            .style("font-size", "9px")
+            .style("font-weight", "500")
             .attr("dx", "-.8em").attr("dy", ".15em")
             .attr("transform", "rotate(-45)");
-        barG.append('g').call(d3.axisLeft(yLin));
-        barG.selectAll('rect.bar-rect')
+        g.append('g').call(d3.axisLeft(yLin).tickFormat(d3.format('.1s')))
+            .selectAll("text")
+            .style("font-size", "9px")
+            .style("font-weight", "500");
+
+        g.selectAll('rect.bar-rect')
             .data(entries).join('rect').attr('class', 'bar-rect')
             .attr('x', d => xBand(d.key))
             .attr('width', xBand.bandwidth())
             .attr('y', d => yLin(d.value))
             .attr('height', d => drawingHeight - yLin(d.value))
-            .attr('fill', '#69b3a2');
+            .attr('fill', '#5b9bd5')
+            .attr('rx', 2);
     } else {
         const xLin = d3.scaleLinear().domain([0, maxValue]).nice().range([0, drawingWidth]);
-        const yBand = d3.scaleBand().domain(entries.map(d => d.key)).range([0, drawingHeight]).padding(0.1);
-        barG.append('g').call(d3.axisLeft(yBand));
-        barG.append('g').call(d3.axisTop(xLin).ticks(drawingWidth / 80));
-        barG.selectAll('rect.bar-rect')
+        const yBand = d3.scaleBand().domain(entries.map(d => d.key)).range([0, drawingHeight]).padding(0.15);
+
+        g.append('g').call(d3.axisLeft(yBand))
+            .selectAll("text")
+            .style("font-size", "9px")
+            .style("font-weight", "500");
+        g.append('g').call(d3.axisTop(xLin).tickFormat(d3.format('.1s')))
+            .selectAll("text")
+            .style("font-size", "9px")
+            .style("font-weight", "500");
+
+        g.selectAll('rect.bar-rect')
             .data(entries).join('rect').attr('class', 'bar-rect')
             .attr('y', d => yBand(d.key))
             .attr('height', yBand.bandwidth())
             .attr('x', 0)
             .attr('width', d => xLin(d.value))
-            .attr('fill', '#404080');
+            .attr('fill', '#70ad47')
+            .attr('rx', 2);
     }
 }
 
@@ -518,4 +566,17 @@ function regionOf(country) {
     if (af.includes(country)) return "Africa";
     if (country && (country.toLowerCase().includes("oecd") || country.toLowerCase().includes("total"))) return "OECD Average";
     return "Other";
+}
+
+// Debounce function for resize events
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }

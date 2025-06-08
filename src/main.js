@@ -5,7 +5,19 @@ import { renderCountryGrid } from "./memberCountries.js";
 const slides = [ { headline: "How’s life?", description: `What makes for a good life? Many people might say “money” or “career success,” but quality of life goes far beyond income. The OECD Better Life Index 2024 compares countries not just economically, but across 11 key dimensions that truly shape our daily lives — like health, education, environment, work-life balance, and social connection.<br><br>This project invites you to explore these factors interactively. Through data and storytelling, we’ll uncover where people are most satisfied with life in 2024 — and why.`, }, { headline: "Where are you from?", description: `The Better Life Index focuses on 38 OECD member countries. These nations vary widely in culture, policy, and — as we’ll see — in overall life satisfaction.<br><br>Take a look at the map below, and you’ll already notice something interesting: countries like Finland, Denmark, and the Netherlands are glowing with high satisfaction scores.<br><br>In contrast, countries like Turkey or Greece show much lower levels of reported life satisfaction. What explains this difference? What are the real drivers of happiness?`, }, { headline: "Does Money Buy Happiness?", description: `A common belief is that wealth is a direct path to happiness. Let's explore this with data.<br><br>The scatterplot below compares a country's economic output, measured by 'GDP per capita', with the average 'Life Satisfaction' score reported by its citizens. Each bubble represents a country.<br><br>As you can see, there is a clear upward trend: countries with a higher GDP per capita tend to have higher life satisfaction. This suggests that economic prosperity does play a significant role in a nation's well-being.<br><br>However, the relationship isn't perfect. Some countries report higher satisfaction than their GDP would suggest, while others fall below the trend line. This indicates that while money is a factor, other elements like social support, health, and work-life balance are also crucial pieces of the happiness puzzle.`, }, { headline: "What does the “perfect” country look like?", description: `Each country has its own strengths — and weaknesses. The Better Life Index evaluates 11 different life aspects: from jobs and health to environment, education, safety, and community.<br><br>No country is best at everything. That’s why we compare “profiles”—unique patterns across all dimensions of well-being. Compare, for example, the Netherlands and the United States. The Netherlands excels in work-life balance and social support, while the U.S. leads in education and income—but falls behind in safety and civic engagement.<br><br>The key insight: top-performing countries aren’t perfect—but balanced. They combine moderate to high values across many dimensions to create a more sustainable satisfaction.`, }, { headline: "World Map", description: `Curious about your own country? Use the map below to see how it stacks up against others. Discover where it excels—and where it still has room to grow.`, }, { headline: "Conclusion: <br> What is a “better life”?", description: `Our journey through the data shows:<br><br>There is no single “best” country. But there are patterns. The most satisfied societies aren’t always the richest—they’re the most balanced. They value time, trust, health, and freedom.<br><br>Quality of life is multi-dimensional. It’s about balance—not just growth. Data can help us understand, compare, and improve it. So what would you choose in a better life? More time? Better health? A safer community? This dashboard is your tool to explore.`, }, { headline: "Dashboard" } ];
 let current = 0;
 
-document.addEventListener("DOMContentLoaded", () => { initCarousel(); });
+document.addEventListener("DOMContentLoaded", () => {
+  initCarousel();
+
+  // Check if we're navigating from dashboard to a specific slide
+  const targetSlide = localStorage.getItem('bli-target-slide');
+  if (targetSlide !== null) {
+    const slideIndex = parseInt(targetSlide);
+    localStorage.removeItem('bli-target-slide'); // Clean up
+    if (slideIndex >= 0 && slideIndex < slides.length - 1) {
+      setTimeout(() => navigateTo(slideIndex), 100); // Small delay to ensure DOM is ready
+    }
+  }
+});
 
 function initCarousel() {
   const container = document.querySelector(".slide-container");
@@ -28,7 +40,7 @@ function initCarousel() {
     const el = template.cloneNode(true);
     el.querySelector(".headline").innerHTML = slide.headline;
     el.querySelector(".description").innerHTML = slide.description;
-    
+
     if (i === 0) {
       const logo = document.createElement("img");
       logo.src = "/logo-bli.png";
@@ -50,7 +62,7 @@ function initCarousel() {
       gridDiv.id = "member-countries-grid";
       gridDiv.style.margin = "20px 0";
       el.querySelector(".description").insertAdjacentElement("afterend", gridDiv);
-      
+
       const notificationText = document.createElement('p');
       notificationText.className = 'selection-notification';
       notificationText.textContent = 'Please select a country to continue.';
@@ -68,7 +80,7 @@ function initCarousel() {
       const mapDiv = document.createElement("div");
       mapDiv.id = "map-container";
       mapDiv.style.width = "100%";
-     mapDiv.style.minHeight = "320px";
+      mapDiv.style.minHeight = "320px";
       mapDiv.style.margin = "20px 0";
       el.querySelector(".description").insertAdjacentElement("afterend", mapDiv);
     }
@@ -125,18 +137,18 @@ function renderSlideContent(idx) {
 
   if (title === "Where are you from?" && !document.querySelector("#member-countries-grid .country-box")) {
     renderCountryGrid("#member-countries-grid");
-    
+
     // Logic to disable the "Next" button and hide the notification on selection
     const slideEl = document.querySelectorAll(".slide-container .slide")[idx];
     const nextBtn = slideEl.querySelector(".next");
     const notificationText = slideEl.querySelector('.selection-notification');
-    
+
     nextBtn.disabled = true;
 
     function onSelect() {
       nextBtn.disabled = false;
       if (notificationText) {
-          notificationText.style.display = 'none';
+        notificationText.style.display = 'none';
       }
       document.removeEventListener("countrySelected", onSelect);
     }

@@ -171,6 +171,9 @@ d3.csv('/data/2024BetterLife.csv', d3.autoType).then(raw => {
         if (scatterPlotMasterCountry) renderRadarChart('#chart', radarChartLongData, extentByIndicatorRadar, scatterPlotMasterCountry);
         renderBarChart();
     }, 250));
+
+    // Initialize progress indicator functionality
+    initProgressIndicator();
 });
 
 // 3. Scatter Plot Functions
@@ -584,4 +587,29 @@ function debounce(func, wait) {
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
     };
+}
+
+// Progress indicator functionality
+function initProgressIndicator() {
+    const progressDots = document.querySelectorAll('.progress-dot');
+
+    progressDots.forEach((dot, index) => {
+        // Add appropriate cursor styles
+        if (dot.classList.contains('progress-dot-dashboard')) {
+            dot.style.cursor = 'default';
+        } else {
+            dot.style.cursor = 'pointer';
+
+            // Add click handler for navigation
+            dot.addEventListener('click', function() {
+                const slideIndex = parseInt(dot.dataset.index);
+                if (slideIndex >= 0 && slideIndex <= 5) {
+                    // Store the target slide index
+                    localStorage.setItem('bli-target-slide', slideIndex.toString());
+                    // Navigate to main story
+                    window.location.href = 'index.html';
+                }
+            });
+        }
+    });
 }

@@ -10,12 +10,23 @@
     <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
+<!-- Progress Indicator at the very top -->
+<div class="progress-indicator">
+    <div class="progress-dot visited" data-index="0"></div>
+    <div class="progress-dot visited" data-index="1"></div>
+    <div class="progress-dot visited" data-index="2"></div>
+    <div class="progress-dot visited" data-index="3"></div>
+    <div class="progress-dot visited" data-index="4"></div>
+    <div class="progress-dot visited" data-index="5"></div>
+    <div class="progress-dot progress-dot-dashboard active" data-index="6"></div>
+</div>
+
 <div class="dashboard-container">
     <h1 class="headline">OECD Better Life Index Dashboard</h1>
 
     <section class="control-panel">
         <div>
-            <label for="country-select">Select Country (for Radar & Scatter Plot Highlight):</label>
+            <label for="country-select">Select your country</label>
             <select id="country-select">
                 <option>Loading…</option>
             </select>
@@ -84,8 +95,6 @@
         </div>
     </div>
 </div>
-
-<a href="index.html" class="prev-link nav-btn">← Go to Introduction</a>
 
 <script type="module" src="/src/dashboard.js"></script>
 </body>

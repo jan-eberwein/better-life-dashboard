@@ -436,6 +436,7 @@ body {
     justify-content: center;
     margin: 1rem 0;
     gap: 45px; /* User-defined gap */
+    padding-top: 1rem; /* Add top padding for dashboard page */
 }
 
 /* Base style for dots (upcoming) */
@@ -447,6 +448,7 @@ body {
     border: 2px solid #ccc;
     position: relative;
     transition: all 0.3s ease;
+    cursor: pointer; /* Default cursor for clickable dots */
 }
 
 /* State: Visited */
@@ -460,6 +462,7 @@ body {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
     transform: scale(1.25);
+    cursor: default; /* Non-clickable for active dot */
 }
 
 /* Special style for the Dashboard dot */
@@ -467,8 +470,14 @@ body {
     background-color: var(--color-white) !important;
     border: 2px dashed var(--color-primary) !important;
     font-size: 16px;
+    cursor: default !important; /* Dashboard dot is not clickable */
 }
 
+/* When dashboard dot is active, keep it blue */
+.progress-dot-dashboard.active {
+    background-color: var(--color-primary) !important;
+    border: 2px dashed var(--color-primary) !important;
+}
 
 /* FIX for Map Tooltip Visibility */
 #tooltip {

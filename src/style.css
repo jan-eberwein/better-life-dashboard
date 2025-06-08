@@ -30,9 +30,6 @@
     --color-gray-light: #E0E0E0;  /* gray-light */
     --color-white:      #FFFFFF;  /* white */
     --color-secondary:  #F5A623;  /* secondary orange */
-
-    /* Legacy variables for backward compatibility */
-    --color-gray-dark: var(--color-gray-dark);
 }
 * { box-sizing: border-box; }
 html, body {
@@ -43,27 +40,29 @@ html, body {
     color: var(--color-gray-dark);
 }
 
-/* 3 ▸ CAROUSEL LAYOUT (If applicable, for a storytelling page perhaps)
+/* 3 ▸ CAROUSEL LAYOUT
    ───────────────────────────────*/
 .carousel {
     width: 100%;
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: start;
     padding: 2rem;
+    gap: 1rem;
 }
 .slide-container {
     width: 100%;
-    max-width: 1000px; /* Or dashboard max-width if used for dashboard sections */
+    max-width: 1000px;
 }
 
-/* 4 ▸ SLIDES (If applicable)
+/* 4 ▸ SLIDES
    ───────────────────────────────*/
 .slide {
     display: none;
     flex-direction: column;
-    gap: 0.75rem;                                   /* base rhythm everywhere */
+    gap: 0.75rem;
 }
 .slide.active { display: flex; }
 
@@ -71,7 +70,7 @@ html, body {
 .headline {
     font-size: 2.5rem;
     font-weight: 900;
-    margin: 0 0 0.335em 0;                          /* paragraph gap halved */
+    margin: 0 0 0.335em 0;
     color: var(--color-gray-dark);
 }
 .description {
@@ -80,8 +79,8 @@ html, body {
     color: var(--color-gray-dark);
 }
 
-/* Doubling ONLY subtitle → headline spacing on first slide (If applicable) */
-.slide:first-child .headline { margin-top: 0.75rem; }  /* + 0.75 rem → 1.5 rem total */
+/* Doubling ONLY subtitle → headline spacing on first slide */
+.slide:first-child .headline { margin-top: 0.75rem; }
 
 /* Responsive type */
 @media (max-width: 600px) {
@@ -89,7 +88,7 @@ html, body {
     .description { font-size: 0.9rem;  }
 }
 
-/* 5 ▸ FIRST‑SLIDE BRANDING (If applicable)
+/* 5 ▸ FIRST‑SLIDE BRANDING
    ───────────────────────────────*/
 .slide .logo {
     width: clamp(180px, 25vw, 240px);
@@ -99,12 +98,12 @@ html, body {
     font-size: clamp(2.8rem, 6.5vw, 4.2rem);
     font-weight: 900;
     line-height: 1.05;
-    margin: 0.6rem 0 0;                             /* space below logo */
+    margin: 0.6rem 0 0;
     text-align: left;
     color: var(--color-gray-dark);
 }
 
-/* 6 ▸ IMAGES (If applicable)
+/* 6 ▸ IMAGES
    ───────────────────────────────*/
 .images {
     display: flex;
@@ -118,7 +117,7 @@ html, body {
 }
 @media (max-width: 600px) { .images img { width: 100%; } }
 
-/* 8 ▸ NAVIGATION CONTROLS
+/* 7 ▸ NAVIGATION CONTROLS
    ───────────────────────────────*/
 .nav-controls {
     display: flex;
@@ -140,292 +139,10 @@ html, body {
     color: var(--color-white);
     border-color: var(--color-primary);
 }
-.slide:first-child .prev { visibility: hidden; }  /* hide "Prev" on slide 0 (If applicable) */
+.slide:first-child .prev { visibility: hidden; }
 
-/* 9 ▸ TOOLTIPS
+/* 8 ▸ PROGRESS INDICATOR
    ───────────────────────────────*/
-/* Map Tooltip */
-#map-tooltip {
-    position: absolute;
-    pointer-events: none;
-    background: var(--color-white);
-    border: 1px solid var(--color-gray-light);
-    padding: 0.5rem;
-    font-size: 0.85rem;
-    border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0,0,0,.15);
-    z-index: 1000;
-    white-space: nowrap;
-}
-
-.tooltip-legend ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-/* General Scatter Tooltip from V1 style (used by some scatter plots if not .scatter-tooltip-external) */
-.scatter-tip {
-    background: rgba(255, 255, 255, 0.95);
-    padding: 6px 10px;
-    border: 1px solid var(--color-gray-light);
-    border-radius: 4px;
-    font-size: 11px;
-    position: absolute;
-    pointer-events: none;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    white-space: nowrap;
-    z-index: 1000;
-}
-
-/* Tooltip for story scatter (If applicable, could be a specific variant) */
-.scatter-tooltip-story {
-    font-family: Raleway, sans-serif;
-}
-
-/* ── DASHBOARD SPECIFIC STYLES ────────────────────────────────── */
-.dashboard-container {
-    max-width: 1000px;
-    margin: 2rem auto;
-    padding: 1rem;
-}
-
-/* Control Panel for Dashboard */
-.control-panel {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    padding: 10px;
-    background-color: #f8f9fa;
-    border-radius: 4px;
-    border: 1px solid var(--color-gray-light);
-}
-.control-panel > div {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.control-panel label {
-    display: block;
-    margin-bottom: 0.25rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--color-gray-dark);
-}
-.control-panel select,
-.control-panel input[type="checkbox"] {
-    font-size: 0.9rem;
-    padding: 0.25rem 0.4rem;
-    border: 1px solid var(--color-gray-light);
-    border-radius: 3px;
-}
-.control-panel input[type="checkbox"] {
-    padding: 0;
-    margin-right: 0.3em;
-    vertical-align: middle;
-}
-.control-panel label[for*="checkbox"] {
-    font-weight: normal;
-    vertical-align: middle;
-}
-
-/* ── Bar Chart Section Specifics ──────────────────────────────── */
-#bar-chart {
-    width: 100%;
-    min-height: 400px;
-    margin-top: 0.5rem;
-}
-
-/* Ensure chart SVGs are responsive within their containers */
-#chart svg,
-#scatter-plot-container svg,
-#bar-chart svg {
-    display: block;
-    width: 100%;
-    height: auto;
-    max-width: 100%;
-}
-
-/* Adjustments for axis text in D3 charts if it gets cut off or overlaps */
-.axis text {
-    font-size: 10px;
-    fill: var(--color-gray-dark);
-}
-.axis path,
-.axis line {
-    fill: none;
-    stroke: var(--color-gray-mid);
-    shape-rendering: crispEdges;
-}
-
-body {
-    font-family: 'Raleway', sans-serif;
-}
-
-/* Controls */
-#controls {
-    width: 100%;
-    padding: 8px;
-    background: var(--color-white);
-    border-bottom: 1px solid var(--color-gray-light);
-}
-
-/* Country widget */
-#country-widget {
-    font-family: 'Raleway', sans-serif;
-    margin: 8px 0;
-    padding: 10px;
-    background: #f9f9f9;
-    border: 1px solid var(--color-gray-light);
-}
-.widget-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.widget-header .flag {
-    font-size: 1.5em;
-}
-.widget-header .country-name {
-    font-weight: 600;
-    font-size: 1.2em;
-    color: var(--color-gray-dark);
-}
-.widget-header .pop {
-    margin-left: auto;
-    color: var(--color-gray-mid);
-}
-.widget-metrics {
-    margin-top: 8px;
-    list-style: none;
-    padding: 0;
-}
-.widget-metrics li {
-    font-size: 1em;
-    margin-bottom: 4px;
-    color: var(--color-gray-dark);
-}
-.widget-metrics .ls-value {
-    font-weight: 600;
-    color: inherit;
-}
-
-/* Tooltip */
-#tooltip {
-    position: absolute;
-    pointer-events: none;
-    background: rgba(255,255,255,0.95);
-    border: 1px solid var(--color-gray-mid);
-    padding: 8px;
-    border-radius: 4px;
-    font-family: 'Raleway', sans-serif;
-    font-size: 0.9em;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    z-index: 10;
-}
-.tooltip-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 4px;
-}
-.tooltip-header .flag {
-    font-size: 1.2em;
-}
-.tooltip-header .name {
-    font-weight: 600;
-    color: var(--color-gray-dark);
-}
-.tooltip-header .pop {
-    margin-left: auto;
-    font-size: 0.85em;
-    color: var(--color-gray-mid);
-}
-.tooltip-metric {
-    margin-bottom: 6px;
-    color: var(--color-gray-dark);
-}
-.tooltip-metric .ls-value {
-    font-weight: 600;
-}
-.tooltip-chart {
-    display: block;
-    margin: 0 auto;
-}
-
-/* Ensure the tooltip can grow and wrap text */
-#tooltip {
-    position: absolute;
-    pointer-events: none;
-    background: rgba(255, 255, 255, 0.97);
-    border: 1px solid var(--color-gray-mid);
-    padding: 30px;
-    border-radius: 4px;
-    font-family: 'Raleway', sans-serif;
-    font-size: 0.95em;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    max-width: 240px;
-    white-space: normal;
-    z-index: 1000;
-}
-
-/* Give a bit more breathing room inside */
-.tooltip-header {
-    margin-bottom: 8px;
-}
-.tooltip-metric {
-    margin-bottom: 8px;
-}
-
-/* Make the radar-chart container flex-center so it's always visible */
-.tooltip-chart {
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 6px;
-}
-
-/* Legend below chart */
-.tooltip-legend {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    margin-top: 6px;
-}
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.85em;
-    color: var(--color-gray-dark);
-}
-.legend-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 2px;
-    display: inline-block;
-}
-
-/* hide bullet points */
-.tooltip-chart ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-/* Prevent any overflow hiding */
-.tooltip-chart svg {
-    overflow: visible;
-}
-
-/* 10 ▸ PROGRESS INDICATOR
-   ───────────────────────────────*/
-.carousel {
-    flex-direction: column;
-    gap: 1rem;
-}
-
 .progress-indicator {
     display: flex;
     align-items: center;
@@ -475,8 +192,38 @@ body {
     border: 2px dashed var(--color-primary) !important;
 }
 
-/* FIX for Map Tooltip Visibility */
+/* 9 ▸ TOOLTIPS
+   ───────────────────────────────*/
+.scatter-tip {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 6px 10px;
+    border: 1px solid var(--color-gray-light);
+    border-radius: 4px;
+    font-size: 11px;
+    position: absolute;
+    pointer-events: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+.scatter-tooltip-story {
+    font-family: Raleway, sans-serif;
+}
+
 #tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid var(--color-gray-mid);
+    padding: 30px;
+    border-radius: 4px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.95em;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    max-width: 240px;
+    white-space: normal;
+    z-index: 1000;
     opacity: 1;
     transition: opacity 0.2s ease-in-out;
 }
@@ -485,40 +232,99 @@ body {
     opacity: 0;
 }
 
-/* Styling for the selection notification on slide 2 */
-.selection-notification {
-    text-align: center;
-    margin-top: 1rem;
+.tooltip-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.tooltip-header .flag {
+    font-size: 1.2em;
+}
+.tooltip-header .name {
+    font-weight: 600;
+    color: var(--color-gray-dark);
+}
+.tooltip-header .pop {
+    margin-left: auto;
+    font-size: 0.85em;
     color: var(--color-gray-mid);
-    font-style: italic;
-    font-size: 0.9rem;
+}
+.tooltip-metric {
+    margin-bottom: 8px;
+    color: var(--color-gray-dark);
+}
+.tooltip-metric .ls-value {
+    font-weight: 600;
+}
+.tooltip-chart {
+    display: block;
+    margin: 0 auto;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.tooltip-chart ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.tooltip-chart svg {
+    overflow: visible;
 }
 
-/* ── DASHBOARD RESPONSIVE LAYOUT STYLES ────────────────────────── */
+/* Legend below chart */
+.tooltip-legend {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 6px;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85em;
+    color: var(--color-gray-dark);
+}
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    display: inline-block;
+}
 
-/* Dashboard Container - Enhanced */
+/* 10 ▸ DASHBOARD STYLES
+   ───────────────────────────────*/
+
+/* Dashboard Container */
 .dashboard-container {
-    max-width: 1400px;
+    max-width: calc(100vw - 4rem);
     margin: 2rem auto;
     padding: 1rem;
+    box-sizing: border-box;
 }
 
-/* Enhanced Control Panel */
+/* Control Panel */
 .control-panel {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
+    display: grid;
+    grid-template-columns: 300px 1fr; /* Fixed width for first column */
+    gap: 2rem;
     margin-bottom: 1.5rem;
     padding: 15px;
     background-color: #f8f9fa;
     border-radius: 8px;
     border: 1px solid var(--color-gray-light);
+    max-width: calc(100vw - 4rem);
+    box-sizing: border-box;
+    align-items: center;
 }
 
 .control-panel > div {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    grid-column: 1;
 }
 
 .control-panel label {
@@ -527,7 +333,8 @@ body {
     font-size: 0.9rem;
 }
 
-.control-panel select {
+.control-panel select,
+.control-panel input[type="checkbox"] {
     padding: 8px 12px;
     border: 1px solid var(--color-gray-light);
     border-radius: 4px;
@@ -536,17 +343,29 @@ body {
     color: var(--color-gray-dark);
 }
 
+.control-panel input[type="checkbox"] {
+    padding: 0;
+    margin-right: 0.3em;
+    vertical-align: middle;
+    accent-color: var(--color-primary);
+}
+
+.control-panel label[for*="checkbox"] {
+    font-weight: normal;
+    vertical-align: middle;
+}
+
 /* Main Dashboard Grid Layout */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1fr 0.67fr;
+    grid-template-columns: 1.4fr 0.6fr; /* Made left bigger, right smaller */
     gap: 2rem;
     min-height: 0;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 20 / 9; /* Less tall overall */
     margin-bottom: 2rem;
 }
 
-/* Left Panel - Main Chart (60% width) */
+/* Left Panel - Main Chart */
 .main-chart-panel {
     display: flex;
     flex-direction: column;
@@ -620,7 +439,7 @@ body {
     justify-content: center;
 }
 
-/* Right Panel - Side Charts (40% width) */
+/* Right Panel - Side Charts */
 .side-charts-panel {
     display: grid;
     grid-template-rows: 1fr 1fr;
@@ -661,7 +480,7 @@ body {
     justify-content: center;
 }
 
-/* Chart containers - Enhanced */
+/* Chart containers */
 #chart svg,
 #scatter-plot-container svg,
 #bar-chart svg {
@@ -671,7 +490,83 @@ body {
     max-height: 100%;
 }
 
-/* Enhanced Navigation Button */
+#bar-chart {
+    width: 100%;
+    min-height: 400px;
+    margin-top: 0.5rem;
+}
+
+/* Chart axis styling */
+.axis text {
+    font-size: 10px;
+    fill: var(--color-gray-dark);
+}
+.axis path,
+.axis line {
+    fill: none;
+    stroke: var(--color-gray-mid);
+    shape-rendering: crispEdges;
+}
+
+/* 11 ▸ MAP SPECIFIC STYLES
+   ───────────────────────────────*/
+#controls {
+    width: 100%;
+    padding: 8px;
+    background: var(--color-white);
+    border-bottom: 1px solid var(--color-gray-light);
+}
+
+#country-widget {
+    font-family: 'Raleway', sans-serif;
+    margin: 8px 0;
+    padding: 10px;
+    background: #f9f9f9;
+    border: 1px solid var(--color-gray-light);
+}
+
+.widget-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.widget-header .flag {
+    font-size: 1.5em;
+}
+.widget-header .country-name {
+    font-weight: 600;
+    font-size: 1.2em;
+    color: var(--color-gray-dark);
+}
+.widget-header .pop {
+    margin-left: auto;
+    color: var(--color-gray-mid);
+}
+.widget-metrics {
+    margin-top: 8px;
+    list-style: none;
+    padding: 0;
+}
+.widget-metrics li {
+    font-size: 1em;
+    margin-bottom: 4px;
+    color: var(--color-gray-dark);
+}
+.widget-metrics .ls-value {
+    font-weight: 600;
+    color: inherit;
+}
+
+/* 12 ▸ UTILITY STYLES
+   ───────────────────────────────*/
+.selection-notification {
+    text-align: center;
+    margin-top: 1rem;
+    color: var(--color-gray-mid);
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
 .prev-link {
     position: fixed;
     bottom: 2rem;
@@ -693,7 +588,8 @@ body {
     background: var(--color-accent);
 }
 
-/* ── RESPONSIVE BREAKPOINTS ────────────────────────────────────── */
+/* 13 ▸ RESPONSIVE BREAKPOINTS
+   ───────────────────────────────*/
 
 /* Large tablets and small desktops (1200px and below) */
 @media (max-width: 1200px) {
@@ -702,6 +598,15 @@ body {
         grid-template-rows: auto auto;
         aspect-ratio: unset;
         gap: 1.5rem;
+    }
+
+    .control-panel {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .control-panel > div {
+        grid-column: 1;
     }
 
     .side-charts-panel {
@@ -727,6 +632,7 @@ body {
 
     .control-panel {
         padding: 10px;
+        grid-template-columns: 1fr;
     }
 
     .main-chart-panel,
